@@ -1,5 +1,5 @@
 load("@bazel_skylib//lib:dicts.bzl", "dicts")
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 load("//dotnet/private:providers.bzl", "DotnetPublishInfo")
 
 def build_test(name, expected_files, run_location = "", args = [], expected_output = ""):
@@ -37,7 +37,7 @@ def build_test(name, expected_files, run_location = "", args = [], expected_outp
             "//tests/tools/executable",
             "//tests/tools/files",
             "@com_github_stretchr_testify//assert",
-            "@io_bazel_rules_go//go/tools/bazel",
+            "@rules_go//go/tools/bazel",
         ],
     )
 

@@ -49,7 +49,9 @@ def dotnet_exec_context(ctx, is_executable, is_test = False, target_framework = 
     tfm = getattr(ctx.attr, "target_framework", target_framework)
     tfm_info = sdk.config.tfm_mapping.get(tfm, None)
     if tfm_info == None:
-        fail("Tfm {} was not configured for restore by nuget. If this was not a mistake, please add it to your ".format(tfm) +
+        print(tfm)
+        print(sdk.config.tfm_mapping)
+        fail("target_framework {} was not configured for restore by nuget. If this was not a mistake, please add it to your ".format(tfm) +
              "nuget_fetch rule.")
 
     mode = ctx.var["COMPILATION_MODE"]
@@ -110,6 +112,8 @@ def _make_env(dotnet_sdk_root, os):
         # "NUGET_SHOW_STACK": "true",
         # "BUILDER_DEBUG": "1",
         "RULES_MSBUILD_VERSION": VERSION,
+        "PATHEXT": "COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC",
+        "PATH": "C:\\WINDOWS\\system32;C:\\WINDOWS"
     }
 
     if os not in NUGET_ENVIRONMENTS:
@@ -158,8 +162,8 @@ def make_builder_cmd(ctx, dotnet, action, directory_info, assembly_name):
         dotnet.config.configuration,
         "--output_type",
         "exe" if dotnet.config.is_executable else "library",
-        "--directory",
-        [s for s in directory_info.srcs],
+        # "--directory",
+        # [s for s in directory_info.srcs],
         "--assembly_name",
         assembly_name,
     ])

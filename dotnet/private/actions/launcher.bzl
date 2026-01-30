@@ -7,7 +7,7 @@ def make_launcher(ctx, dotnet, info):
 
     launcher = ctx.actions.declare_file(
         ctx.attr.name + dotnet.ext,
-        sibling = info.output_dir,
+        sibling = info.assembly,
     )
 
     is_bin_launcher = dotnet.os == "windows"
@@ -15,7 +15,7 @@ def make_launcher(ctx, dotnet, info):
     launch_data = {
         "dotnet_bin_path": to_manifest_path(ctx, sdk.dotnet),
         "target_bin_path": to_manifest_path(ctx, info.assembly),
-        "output_dir": to_manifest_path(ctx, info.output_dir),
+        "output_dir": to_manifest_path(ctx, info.assembly)+"/..",
         "dotnet_root": sdk.root_file.dirname,
         "dotnet_args": _format_launcher_args([], is_bin_launcher),
         "assembly_args": _format_launcher_args([], is_bin_launcher),

@@ -20,7 +20,7 @@ namespace NuGetParser
         public Package(string requestedName)
         {
             RequestedName = requestedName;
-            Label = $"@nuget//{requestedName}";
+            Label = $"//{requestedName}";
         }
     }
 

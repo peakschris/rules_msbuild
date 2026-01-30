@@ -9,7 +9,7 @@ namespace RulesMSBuild.Tools.Builder.Diagnostics
     {
         private readonly PathMapper _pathMapper;
         public LoggerVerbosity Verbosity { get; set; }
-        public string Parameters { get; set; }
+        public string? Parameters { get; set; }
         
         private readonly TargetGraph _targetGraph;
         private readonly Stack<Cluster> _projectStack = new Stack<Cluster>();
@@ -35,15 +35,15 @@ namespace RulesMSBuild.Tools.Builder.Diagnostics
             {
                 case ProjectStartedEventArgs pStart:
                     BazelLogger.Debug(
-                        $"Building project {pStart.ProjectFile}\n\t{string.Join("\n\t", pStart.GlobalProperties.Select(p => $"{p.Key}: {p.Value}"))}");
-                    var clusterNameS = _pathMapper.ToBazel(pStart.ProjectFile);
+                        $"Building project {pStart.ProjectFile}\n\t{string.Join("\n\t", pStart.GlobalProperties?.Select(p => $"{p.Key}: {p.Value}") ?? Enumerable.Empty<string>())}");
+                    var clusterNameS = _pathMapper.ToBazel(pStart.ProjectFile ?? "");
                     var cluster = _targetGraph!.GetOrAddCluster(clusterNameS, pStart.GlobalProperties);
                     if (_cluster != null)
                         _projectStack.Push(_cluster);
                     _cluster = cluster;
                     return;
                 case ProjectFinishedEventArgs pEnd:
-                    var clusterNameE = _pathMapper.ToBazel(pEnd.ProjectFile);
+                    var clusterNameE = _pathMapper.ToBazel(pEnd.ProjectFile ?? "");
                     if (_cluster!.Name != clusterNameE) throw new Exception(":(");
                     _projectStack.TryPop(out _cluster);
                     return;

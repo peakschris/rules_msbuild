@@ -15,7 +15,6 @@ def _dotnet_toolchain_impl(ctx):
             _builder = struct(
                 assembly = builder_info.assembly,
                 files = depset(
-                    [builder_info.output_dir],
                     transitive = [sdk.runfiles],
                 ),
             ),

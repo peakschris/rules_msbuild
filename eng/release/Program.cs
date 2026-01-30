@@ -103,7 +103,7 @@ namespace release
             Run($"chmod -R 755 nupkg");
 
             Directory.SetCurrentDirectory(test);
-            var tool = Path.Combine(_work, "nupkg/tools/net6.0/any/Bzl.dll");
+            var tool = Path.Combine(_work, "nupkg/tools/net8.0/any/Bzl.dll");
 
             Run("dotnet new console -o console --no-restore");
             Run($"dotnet exec {tool} _test {tar}");

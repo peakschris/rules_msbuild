@@ -14,7 +14,7 @@ msbuild_library(
     srcs = [],
     project_file = "Proto.csproj",
     protos = [":greet_proto"],
-    target_framework = "net5.0",
+    target_framework = "net8.0",
     visibility = ["//visibility:public"],
     deps = ["@nuget//Grpc.AspNetCore"],
 )

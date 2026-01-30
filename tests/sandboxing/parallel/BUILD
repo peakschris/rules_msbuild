@@ -21,7 +21,7 @@ msbuild_binary(
     name = "foo",
     srcs = ["foo.cs"],
     tags = TAGS,
-    target_framework = "netcoreapp3.1",
+    target_framework = "net8.0",
     visibility = ["//visibility:public"],
 )
 
@@ -31,7 +31,7 @@ genrule(
     srcs = [],
     outs = ["run_foo.txt"],
     cmd = "$(location :foo) > $@",
-    exec_tools = [":foo"],
+    tools = [":foo"],
     tags = TAGS,
 )
 

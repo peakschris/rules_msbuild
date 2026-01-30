@@ -5,7 +5,7 @@ def nuget_deps():
     nuget_fetch(
         name = "nuget",
         packages = {},
-        target_frameworks = ["netcoreapp3.1"],
+        target_frameworks = ["net8.0"],
         use_host = True,
         deps = nuget_deps_helper(FRAMEWORKS, PACKAGES),
     )

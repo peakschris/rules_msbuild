@@ -31,7 +31,7 @@ namespace RulesMSBuild.Tests.Tools
                 nuget_config = "nuget.Config",
                 directory_bazel_props = "Directory.Bazel.props",
                 configuration = "debug",
-                tfm = "netcoreapp3.1",
+                tfm = "net8.0",
                 sdk_root = "dotnet/sdk",
                 DirectorySrcs = Array.Empty<string>()
             };

@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@rules_go//go:def.bzl", "go_test")
 load("//tests/tools/build_test:build_test.bzl", "build_test")
 load("//dotnet:defs.bzl", "msbuild_binary")
 
@@ -6,7 +6,7 @@ msbuild_binary(
     name = "DotnetCat",
     srcs = ["DotnetCat.cs"],
     data = ["foo.txt"],
-    target_framework = "netcoreapp3.1",
+    target_framework = "net8.0",
     visibility = ["//visibility:public"],
     deps = [
         "//dotnet/tools/Runfiles",
@@ -16,10 +16,10 @@ msbuild_binary(
 build_test(
     name = "DotnetCat_publish_test",
     expected_files = {
-        "publish/netcoreapp3.1/DotnetCat.dll.runfiles": [
+        "publish/net8.0/DotnetCat.dll.runfiles": [
             "MANIFEST",
         ],
-        "publish/netcoreapp3.1/DotnetCat.dll.runfiles/rules_msbuild/tests/dotnet/tools/runfiles/integration": [
+        "publish/net8.0/DotnetCat.dll.runfiles/rules_msbuild/tests/dotnet/tools/runfiles/integration": [
             "foo.txt",
         ],
     },

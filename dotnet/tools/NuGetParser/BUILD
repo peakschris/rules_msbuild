@@ -16,7 +16,7 @@ msbuild_binary(
         "Restorer.cs",
         "TfmParser.cs",
     ],
-    target_framework = "netcoreapp3.1",  # keep
+    target_framework = "net8.0",  # keep
     visibility = ["//visibility:public"],
 )
 

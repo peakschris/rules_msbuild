@@ -6,6 +6,6 @@ msbuild_library(
         ["config/**"],
         exclude = ["*.json"],
     ) + ["appsettings.json"],
-    target_framework = "net5.0",
+    target_framework = "net8.0",
     visibility = ["//visibility:public"],
 )

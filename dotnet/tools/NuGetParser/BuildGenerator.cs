@@ -52,7 +52,7 @@ namespace NuGetParser
                     b.SetAttr("version", ":" + frameworkVersion.v.Id.Version);
                     b.SetAttr("deps",
                         frameworkVersion.v.Deps[frameworkVersion.Tfm]
-                            .Select(d => $"@nuget//{d.Name}:{d.Version}-{frameworkVersion.Tfm}").OrderBy(d => d));
+                            .Select(d => $"//{d.Name}:{d.Version}-{frameworkVersion.Tfm}").OrderBy(d => d));
                     b.EndRule();
                 }
 

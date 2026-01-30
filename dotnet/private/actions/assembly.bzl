@@ -6,15 +6,15 @@ load("@bazel_skylib//lib:paths.bzl", "paths")
 def build_assembly(ctx, dotnet):
     restore = ctx.attr.restore[DotnetRestoreInfo]
 
-    output_dir = ctx.actions.declare_directory(dotnet.config.output_dir_name)
-
-    assembly = ctx.actions.declare_file(paths.join(output_dir.basename, restore.assembly_name + ".dll"))
+    assembly = ctx.actions.declare_file(paths.join(dotnet.config.output_dir_name, restore.assembly_name + ".dll"))
+    output_dir = assembly.dirname
 
     intermediate_dir = ctx.actions.declare_directory(paths.join("obj", dotnet.config.tfm))
 
     # we don't need this file, but adding will make sure bazel fails the build if it isn't created because msbuild
     # didn't listen to our paths
-    intermediate_assembly = ctx.actions.declare_file(paths.join("obj", dotnet.config.tfm, assembly.basename))
+    # print(paths.join("obj", dotnet.config.tfm, assembly.basename))
+    # intermediate_assembly = ctx.actions.declare_file(paths.join("obj", dotnet.config.tfm, assembly.basename))
 
     cache = declare_caches(ctx, "build")
     files, caches, runfiles = _process_deps(ctx, dotnet)
@@ -30,12 +30,12 @@ def build_assembly(ctx, dotnet):
     )
 
     outputs = [
-        output_dir,
+        # output_dir,
         assembly,
         ctx.actions.declare_directory("restore/_/" + dotnet.config.configuration),
         ctx.actions.declare_directory("restore/" + dotnet.config.configuration),
         intermediate_dir,
-        intermediate_assembly,
+        # intermediate_assembly,
         cache.project,
         cache.result,
     ] + cmd_outputs

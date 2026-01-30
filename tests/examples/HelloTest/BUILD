@@ -6,7 +6,7 @@ msbuild_test(
     size = "small",
     srcs = ["HelloTest.cs"],
     project_file = "HelloTest.csproj",
-    target_framework = "net6.0",
+    target_framework = "net8.0",
     deps = [
         "@nuget//Microsoft.NET.Test.Sdk",
         "@nuget//xunit",
@@ -17,7 +17,7 @@ msbuild_test(
 build_test(
     name = "HelloTest_test",
     expected_files = {
-        "net6.0": [
+        "net8.0": [
             "HelloTest.dll",
             "xunit.assert.dll",
             "xunit.runner.visualstudio.dotnetcore.testadapter.dll",
@@ -25,7 +25,7 @@ build_test(
             "Microsoft.VisualStudio.TestPlatform.Extension.JUnit.Xml.TestAdapter.dll",
             "Microsoft.VisualStudio.TestPlatform.Extension.JUnit.Xml.TestLogger.dll",
         ],
-        "net6.0/cs": [
+        "net8.0/cs": [
             "Microsoft.TestPlatform.CommunicationUtilities.resources.dll",
         ],
     },

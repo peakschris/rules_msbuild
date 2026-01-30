@@ -1,6 +1,6 @@
 load("@rules_msbuild//dotnet:defs.bzl", "msbuild_binary")
 load("//tests/tools/build_test:build_test.bzl", "build_test")
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@rules_go//go:def.bzl", "go_test")
 
 msbuild_binary(
     name = "Tool",
@@ -12,7 +12,7 @@ msbuild_binary(
         "foo.txt",
     ],
     packable = True,
-    target_framework = "net6.0",
+    target_framework = "net8.0",
     version = "1.2.3",
     visibility = ["//visibility:public"],
     deps = ["//dotnet/tools/Runfiles"],
@@ -45,6 +45,6 @@ go_test(
         "//tests/tools/executable",
         "//tests/tools/files",
         "@com_github_stretchr_testify//assert",
-        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+        "@rules_go//go/tools/bazel:go_default_library",
     ],
 )

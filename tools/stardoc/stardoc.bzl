@@ -1,6 +1,6 @@
 "Wrap stardoc to set our repo-wide defaults"
 
-load("@io_bazel_stardoc//stardoc:stardoc.bzl", _stardoc = "stardoc")
+load("@stardoc//stardoc:stardoc.bzl", _stardoc = "stardoc")
 
 _PKG = "@rules_msbuild//tools/stardoc"
 

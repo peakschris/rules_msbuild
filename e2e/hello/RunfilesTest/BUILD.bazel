@@ -4,9 +4,9 @@ msbuild_binary(
     name = "RunfilesTest",
     srcs = ["Program.cs"],
     data = ["foo.txt"],
-    target_framework = "net5.0",
+    target_framework = "net8.0",
     visibility = ["//visibility:public"],
     deps = [
-        "@nuget//RulesMSBuild.Runfiles",
+        # "@@nuget//RulesMSBuild.Runfiles",
     ],
 )

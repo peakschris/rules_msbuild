@@ -66,7 +66,7 @@ def _msbuild_assembly(
             rel = "//" + rel.split("//")[1]
         restore_deps.append(rel)
 
-    msbuild_directory = kwargs.pop("msbuild_directory", "%s//:msbuild_defaults" % native.repository_name())
+    msbuild_directory = kwargs.pop("msbuild_directory", "//:msbuild_defaults")
     is_packable = kwargs.pop("packable", False)
     package_id = kwargs.pop("package_id", name)
     version = kwargs.pop("version", None)

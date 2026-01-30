@@ -66,7 +66,7 @@ namespace NuGetParserTests
         {
             _context.Frameworks = new List<FrameworkInfo>()
             {
-                new("net5.0")
+                new("net8.0")
                 {
                     RestoreGroups = new List<FrameworkRestoreGroup>()
                     {
@@ -103,7 +103,7 @@ namespace NuGetParserTests
                         },
                         Deps = new Dictionary<string, List<PackageId>>()
                         {
-                            ["net5.0"] = new()
+                            ["net8.0"] = new()
                             {
                                 new PackageId("NETStandard.Library/1.0.0")
                             }
@@ -120,7 +120,7 @@ namespace NuGetParserTests
                         },
                         Deps = new Dictionary<string, List<PackageId>>()
                         {
-                            ["net5.0"] = new()
+                            ["net8.0"] = new()
                             {
                                 new PackageId("NETStandard.Library/2.0.0")
                             }
@@ -189,10 +189,10 @@ namespace NuGetParserTests
             commandLine.Versions.Keys.Should().Equal("2.8.0", "2.9.0-preview1");
 
             var standard = commandLine.Versions["2.8.0"];
-            standard.Deps["net5.0"].Select(d => d.String).Should().Equal("NETStandard.Library/1.0.0");
+            standard.Deps["net8.0"].Select(d => d.String).Should().Equal("NETStandard.Library/1.0.0");
 
             var preview = commandLine.Versions["2.9.0-preview1"];
-            preview.Deps["net5.0"].Select(d => d.String).Should().Equal("NETStandard.Library/2.0.0");
+            preview.Deps["net8.0"].Select(d => d.String).Should().Equal("NETStandard.Library/2.0.0");
         }
 
         [Fact]
@@ -242,13 +242,13 @@ namespace NuGetParserTests
             var package = packages[ImplicitFrameworkName];
             package.Versions.Keys.Should().Equal("3.1.0");
             var version = package.Versions.Values.Single();
-            version.Deps.Keys.Should().Equal("net5.0");
+            version.Deps.Keys.Should().Equal("net8.0");
 
 
             package = packages[PackageName];
             package.Versions.Keys.Should().Equal("2.8.0");
             version = package.Versions.Values.Single();
-            version.Deps.Keys.Should().Equal("net5.0");
+            version.Deps.Keys.Should().Equal("net8.0");
 
         }
 
@@ -269,7 +269,7 @@ namespace NuGetParserTests
                         },
                         Deps = new Dictionary<string, List<PackageId>>()
                         {
-                            ["net5.0"] = new()
+                            ["net8.0"] = new()
                         }
                     }
                 }
@@ -278,7 +278,7 @@ namespace NuGetParserTests
 
         private static PackageVersion DefaultPackageVersion(bool addDeps=true)
         {
-            var tfm = "net5.0";
+            var tfm = "net8.0";
             var v = new PackageVersion("CommandLineParser/2.8.0")
             {
                 AllFiles = new List<string>() {"foo"},
@@ -300,7 +300,7 @@ namespace NuGetParserTests
         {
             _context.Frameworks = new List<FrameworkInfo>()
             {
-                new("net5.0")
+                new("net8.0")
                 {
                     RestoreGroups = new List<FrameworkRestoreGroup>()
                     {
@@ -322,21 +322,7 @@ namespace NuGetParserTests
         {
             _context.Frameworks = new List<FrameworkInfo>()
             {
-                new("netcoreapp3.1")
-                {
-                    RestoreGroups = new List<FrameworkRestoreGroup>()
-                    {
-                        new()
-                        {
-                            ObjDirectory = "first",
-                            Packages = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                            {
-                                [PackageName] = "2.8.0"
-                            }
-                        }
-                    }
-                },
-                new("net5.0")
+                new("net8.0")
                 {
                     RestoreGroups = new List<FrameworkRestoreGroup>()
                     {
@@ -351,10 +337,8 @@ namespace NuGetParserTests
                     }
                 }
             };
-            _files.Setup(f => f.GetContents(Path.Combine("first", "project.assets.json")))
-                .Returns(AssetsFactory.Make("netcoreapp3.1", "2.8.0", "1.0.0"));
             _files.Setup(f => f.GetContents(Path.Combine("second", "project.assets.json")))
-                .Returns(AssetsFactory.Make("net5.0", "2.8.0", null));
+                .Returns(AssetsFactory.Make("net8.0", "2.8.0", null));
         }
     }
 

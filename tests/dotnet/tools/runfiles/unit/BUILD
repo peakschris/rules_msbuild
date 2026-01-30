@@ -8,7 +8,7 @@ msbuild_test(
         "MockFile.cs",
         "RunfilesTest.cs",
     ],
-    target_framework = "netcoreapp3.1",
+    target_framework = "net8.0",
     deps = [
         "//dotnet/tools/Runfiles",
         "@nuget//FluentAssertions",

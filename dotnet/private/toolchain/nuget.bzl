@@ -220,7 +220,6 @@ nuget_fetch = repository_rule(
         ),
         # todo(#63) link this to the primary nuget folder if it is not the primary nuget folder
         "dotnet_sdk_root": attr.label(
-            default = Label("@dotnet_sdk//:ROOT"),
         ),
         "use_host": attr.bool(
             default = False,

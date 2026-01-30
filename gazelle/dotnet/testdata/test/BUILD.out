@@ -2,7 +2,7 @@ load("@rules_msbuild//dotnet:defs.bzl", "msbuild_test")
 
 msbuild_test(
     name = "test",
-    target_framework = "net5.0",
+    target_framework = "net8.0",
     deps = [
         "@nuget//Microsoft.NET.Test.Sdk",
         "@nuget//coverlet.collector",

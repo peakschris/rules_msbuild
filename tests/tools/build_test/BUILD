@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@rules_go//go:def.bzl", "go_test")
 
 exports_files([
     "build_test.go",
@@ -14,6 +14,6 @@ go_test(
         "//tests/tools/executable",
         "//tests/tools/files",
         "@com_github_stretchr_testify//assert",
-        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+        "@rules_go//go/tools/bazel:go_default_library",
     ],
 )

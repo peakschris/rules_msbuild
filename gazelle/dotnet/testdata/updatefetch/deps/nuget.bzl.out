@@ -5,10 +5,10 @@ def nuget_deps():
     nuget_fetch(
         name = "nuget",
         packages = {
-            "CommandLineParser/2.9.0": ["net5.0"],
-            "Newtonsoft.Json/13.0.1": ["net5.0"],
+            "CommandLineParser/2.9.0": ["net8.0"],
+            "Newtonsoft.Json/13.0.1": ["net8.0"],
         },
-        target_frameworks = ["net5.0"],
+        target_frameworks = ["net8.0"],
         use_host = True,
         deps = nuget_deps_helper(FRAMEWORKS, PACKAGES),
     )

@@ -78,7 +78,7 @@ genrule(
         " --tar=" + shell.quote("$(OUTS)"),
         "--packages=" + ",".join(["$(location %s)" % p for p in PACKAGES]),
     ]),
-    exec_tools = ["//eng/tar"],
+    tools = ["//eng/tar"],
     tags = [
         "local",
         "no-cache",

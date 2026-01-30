@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <UseAppHost>false</UseAppHost>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <MSBuildPackageVersion>17.0.0</MSBuildPackageVersion>
     <LangVersion>9.0</LangVersion>
     <GenerateProgramFile Condition="$(BazelBuild) != ''">false</GenerateProgramFile>

@@ -5,7 +5,7 @@ msbuild_binary(
     name = "Dependent",
     srcs = glob(["**/*.cs"]),
     project_file = "Dependent.csproj",
-    target_framework = "net6.0",
+    target_framework = "net8.0",
     visibility = ["//visibility:public"],
     deps = [
         "//tests/examples/ClassLibrary",
@@ -15,7 +15,7 @@ msbuild_binary(
 build_test(
     name = "Dependent_test",
     expected_files = {
-        "net6.0": [
+        "net8.0": [
             "Dependent.dll",
             "ClassLibrary.pdb",
             "ClassLibrary.dll",
@@ -27,7 +27,7 @@ build_test(
 build_test(
     name = "Dependent_publish_test",
     expected_files = {
-        "publish/net6.0": [
+        "publish/net8.0": [
             "Dependent.dll",
             "ClassLibrary.pdb",
             "ClassLibrary.dll",

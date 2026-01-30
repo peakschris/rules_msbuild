@@ -11,9 +11,9 @@ def build_tool_binary(ctx, dotnet):
     because bazel's sandboxing/remote execution will cause msbuild to not be able to find reference paths between
     actions. So instead, we execute all msbuild steps in a single action via invoking the publish target directly.
     """
-    output_dir = ctx.actions.declare_directory("publish")
     dep_files = _process_deps(ctx, dotnet)
-    assembly = ctx.actions.declare_file(paths.join(output_dir.short_path, ctx.attr.name + ".dll"))
+    assembly = ctx.actions.declare_file(paths.join("publish", ctx.attr.name + ".dll"))
+    output_dir = assembly.dirname
 
     args = ctx.actions.args()
     args.add_all([
@@ -25,10 +25,10 @@ def build_tool_binary(ctx, dotnet):
     ])
 
     inputs = depset(
-        ctx.files.srcs + [ctx.file.project_file, dotnet.sdk.config.nuget_config] + ctx.files._bazel_packages,
+        ctx.files.srcs + [ctx.file.project_file, dotnet.sdk.config.nuget_config] + ctx.files.bazel_packages,
         transitive = [dep_files, dotnet.sdk.runfiles],
     )
-    outputs = [output_dir, assembly]
+    outputs = [assembly]
 
     binlog = add_diagnostics(ctx, dotnet, outputs)
     if binlog != None:

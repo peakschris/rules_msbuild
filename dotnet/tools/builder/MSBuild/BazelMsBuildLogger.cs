@@ -55,9 +55,9 @@ namespace RulesMSBuild.Tools.Builder.MSBuild
             {
                 HasError = true;
                 if (
-                    args.Message.Contains("are you missing an assembly reference?")
-                    || args.Message.Contains(
-                        "The project file could not be loaded. Could not find a part of the path")
+                    args.Message?.Contains("are you missing an assembly reference?") == true
+                    || args.Message?.Contains(
+                        "The project file could not be loaded. Could not find a part of the path") == true
                 )
                 {
                     Console.WriteLine(

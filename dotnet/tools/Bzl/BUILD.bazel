@@ -21,7 +21,7 @@ msbuild_binary(
     ],
     packable = True,
     package_id = "SamHowes.Bzl",
-    target_framework = "net6.0",
+    target_framework = "net8.0",
     version = VERSION,
     visibility = ["//visibility:public"],
     deps = [

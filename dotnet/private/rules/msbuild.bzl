@@ -6,6 +6,7 @@ load("//dotnet/private/actions:tool_binary.bzl", "build_tool_binary")
 load("//dotnet/private/actions:assembly.bzl", "build_assembly")
 load("//dotnet/private/actions:launcher.bzl", "make_launcher")
 load("@bazel_skylib//lib:dicts.bzl", "dicts")
+load("@rules_proto//proto:defs.bzl", "ProtoInfo")
 
 TOOLCHAINS = ["@rules_msbuild//dotnet:toolchain"]
 
@@ -15,7 +16,7 @@ def _msbuild_tool_binary_impl(ctx):
     info, all_outputs = build_tool_binary(ctx, dotnet)
     return [
         DefaultInfo(
-            files = depset([info.output_dir]),
+            files = depset([info.assembly]),
         ),
         info,
         OutputGroupInfo(
@@ -25,9 +26,9 @@ def _msbuild_tool_binary_impl(ctx):
 
 def _publish_impl(ctx):
     info = publish(ctx)
-    all = depset([info.output_dir])
+    all = depset([info.output_dir] if info.output_dir else [])
     return [
-        DefaultInfo(files = all, runfiles = ctx.runfiles([info.output_dir], transitive_files = info.library.runfiles)),
+        DefaultInfo(files = all, runfiles = ctx.runfiles([info.output_dir] if info.output_dir else [], transitive_files = info.library.runfiles)),
         info,
         info.public,
         OutputGroupInfo(all = all),
@@ -60,7 +61,7 @@ def _make_executable(ctx, is_test):
     launcher_info = ctx.attr._launcher_template[DefaultInfo]
     assembly_runfiles = ctx.runfiles(
         transitive_files = depset(
-            [dotnet.sdk.dotnet, info.assembly, info.output_dir],
+            [dotnet.sdk.dotnet, info.assembly],
             transitive = [info.runfiles],
         ),
     )
@@ -137,9 +138,9 @@ msbuild_tool_binary = rule(
         "deps": attr.label_list(
             providers = [NuGetPackageInfo],
         ),
-        "_bazel_packages": attr.label(default = "@nuget//:bazel_packages", allow_files = True),
+        "bazel_packages": attr.label(allow_files = True),
     }),
-    # this is compiling a dotnet executable, but it'll be a framework dependent executable, so bazel won't be able
+    # this is compiling a dotnet executable, but it'll e a framework dependent executable, so bazel won't be able
     # to execute it directly
     executable = False,
 )
@@ -160,7 +161,7 @@ msbuild_publish = rule(
 _RESTORE_COMMON_ATTRS = dicts.add(_COMMON_ATTRS, {
     "target_framework": attr.string(
         doc = """The [Target Framework Moniker (TFM)](https://docs.microsoft.com/en-us/dotnet/standard/frameworks#supported-target-frameworks)
-of the target framework to compile for, i.e. `net5.0`, `netcoreapp3.1`, `netstandard2.0` etc.
+of the target framework to compile for, i.e. `net8.0`, `netstandard2.0` etc.
 
 * **Must** match the evaluated `<TargetFramework>` property in the project file
 * **Must** be listed in the `target_frameworks` attribute of the `nuget_fetch` call for the workspace

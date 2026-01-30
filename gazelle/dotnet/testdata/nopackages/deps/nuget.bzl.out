@@ -6,7 +6,7 @@ def nuget_deps():
         name = "nuget",
         packages = {
         },
-        target_frameworks = ["net5.0"],
+        target_frameworks = ["net8.0"],
         use_host = True,
         deps = nuget_deps_helper(FRAMEWORKS, PACKAGES),
     )

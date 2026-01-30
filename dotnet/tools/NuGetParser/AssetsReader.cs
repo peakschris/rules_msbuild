@@ -38,6 +38,9 @@ namespace NuGetParser
             _tfm = tfm;
             _assets = JsonSerializer.Deserialize<JsonElement>(
                 _files.GetContents(Path.Combine(objDirectory, "project.assets.json")));
+            // print for debug:
+            Console.Error.WriteLine(Path.Combine(objDirectory, "project.assets.json"));
+            Console.Error.WriteLine(_assets.ToString());
 
             if (!_assets.GetRequired("version", out var version))
             {
@@ -65,6 +68,8 @@ namespace NuGetParser
                     var name = dep.GetProperty("name").GetString();
                     var versionString = GetVersionString(dep);
                     _downloadDeps.GetOrAdd(name, () => new PackageId(name, versionString!));
+                    // print name and versionString to stderr
+                    Console.Error.WriteLine($"{name} {versionString}");
                 }
             }
 
@@ -90,7 +95,17 @@ namespace NuGetParser
                     }
                     else
                     {
-                        overridesPath = Path.Combine(_context.DotnetRoot, "packs", overridesName, tfmVersion + ".0");
+                        overridesPath = Path.Combine(_context.DotnetRoot, "packs", overridesName, tfmVersion);
+                        // start with suffix of ".0"; check existence and if not increment up to ".99"
+                        for (int i = 0; i < 100; i++)
+                        {
+                            var testPath = overridesPath + $".{i}";
+                            if (Directory.Exists(testPath))
+                            {
+                                overridesPath = testPath;
+                                break;
+                            }
+                        }
                     }
 
                     overridesPath = Path.Combine(overridesPath, "data", "PackageOverrides.txt");

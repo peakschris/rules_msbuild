@@ -11,13 +11,15 @@ def publish(ctx):
 
     dotnet = dotnet_exec_context(ctx, info.executable, False, restore.target_framework)
 
-    output_dir = ctx.actions.declare_directory(paths.join("publish", dotnet.config.tfm))
+    output_dir = None
 
     launcher = None
     launcher_windows = None
     if info.executable:
         launcher = ctx.actions.declare_file(paths.join("publish", dotnet.config.tfm, restore.assembly_name))
         launcher_windows = ctx.actions.declare_file(restore.assembly_name + ".exe", sibling = launcher)
+    else:
+        output_dir = ctx.actions.declare_directory(paths.join("publish", dotnet.config.tfm))
 
     cache = declare_caches(ctx, "publish")
 
@@ -34,8 +36,10 @@ def publish(ctx):
         [cache_manifest, ctx.file._launcher_template, runfiles_manifest],
         transitive = [info.files, info.runfiles],
     )
-    outputs = [output_dir, cache.result, cache.project] + cmd_outputs + (
+    outputs = [cache.result, cache.project] + cmd_outputs + (
         [launcher, launcher_windows] if info.executable else []
+    ) + (
+        [output_dir] if output_dir else []
     )
 
     ctx.actions.run(

@@ -21,15 +21,20 @@ def restore(ctx, dotnet):
     outputs.extend([cache.result, cache.project])
 
     assembly_name = _get_assembly_name(ctx, directory_info)
+    print(directory_info)
     args, cmd_outputs = make_builder_cmd(ctx, dotnet, "restore", directory_info, assembly_name)
 
     outputs.extend(cmd_outputs)
-    args.add_all([
-        "--version",
-        ctx.attr.version,
-        "--package_version",
-        ctx.attr.package_version,
-    ])
+    if ctx.attr.version:
+        args.add_all([
+            "--version",
+            ctx.attr.version,
+        ])
+    if ctx.attr.package_version:
+        args.add_all([
+            "--package_version",
+            ctx.attr.package_version,
+        ])
 
     ctx.actions.run(
         mnemonic = "NuGetRestore",
@@ -38,7 +43,7 @@ def restore(ctx, dotnet):
         executable = dotnet.sdk.dotnet,
         arguments = [args],
         env = dotnet.env,
-        tools = dotnet.builder.files,
+        tools = dotnet.builder.files.to_list() + [dotnet.builder.assembly]
     )
 
     return DotnetRestoreInfo(
@@ -70,6 +75,7 @@ def _process_deps(dotnet, ctx):
             files.append(info.files)
             caches.append(info.caches)
         elif NuGetPackageInfo in dep:
+            print(dep)
             get_nuget_files(dep, tfm, files)
         else:
             fail("Unkown dependency type: {}".format(dep))

@@ -24,7 +24,7 @@ msbuild_register_toolchains(
         "linux_amd64": "3687b2a150cd5fef6d60a4693b4166994f32499c507cd04f346b6dda38ecdc46",
     },
     #    version = "3.1.100",
-    version = "host",
+    version = "8.0.116",
 )
 
 load("//deps:nuget.bzl", "nuget_deps")
@@ -34,7 +34,7 @@ nuget_deps()
 
 ### golang ###
 http_archive(
-    name = "io_bazel_rules_go",
+    name = "rules_go",
     sha256 = "7904dbecbaffd068651916dce77ff3437679f9d20e1a7956bff43826e7645fcc",
     urls = [
         "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.25.1/rules_go-v0.25.1.tar.gz",
@@ -62,7 +62,7 @@ git_repository(
     shallow_since = "1633489567 -0400",
 )
 
-load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+load("@rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 load("//deps:go_deps.bzl", "go_dependencies")
 

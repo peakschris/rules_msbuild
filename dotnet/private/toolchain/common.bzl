@@ -1,7 +1,7 @@
 def default_tfm(sdk_version):
     default_tfm_version = sdk_version.rsplit(".", 1)[0]
     major_version = int(default_tfm_version.split(".")[0])
-    default_tfm = ("netcoreapp" if major_version < 5 else "net") + default_tfm_version
+    default_tfm = "net" + default_tfm_version
     return default_tfm
 
 def detect_host_platform(ctx):

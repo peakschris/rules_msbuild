@@ -15,6 +15,7 @@ stardoc(
     visibility = ["//visibility:public"],
     deps = [
         ":bzl",
+        "@rules_proto//proto:defs",
         "//dotnet/private:bzl",
     ],
 )

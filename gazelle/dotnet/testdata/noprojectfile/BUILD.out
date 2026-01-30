@@ -2,5 +2,5 @@ load("@rules_msbuild//dotnet:defs.bzl", "msbuild_binary")
 
 msbuild_binary(
     name = "Greeter",
-    target_framework = "netcoreapp3.1",
+    target_framework = "net8.0",
 )

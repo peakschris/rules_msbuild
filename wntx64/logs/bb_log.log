@@ -1,0 +1,4 @@
+2025-10-23 06:44:21,244 - bb.invoke - INFO - -c init external-symlink
+2025-10-23 06:44:21,509 - bb.modules.init - INFO - Creating external symlink to D:\udu\b\qb4h43l5\external at D:\workdir\github\peakschris\rules_msbuild\external
+2025-10-23 06:44:21,510 - bb.utils.file - DEBUG - symlink D:\workdir\github\peakschris\rules_msbuild\external -> D:\udu\b\qb4h43l5\external
+2025-10-23 06:44:21,510 - bb.invoke - INFO - -c init external-symlink - exit(None)

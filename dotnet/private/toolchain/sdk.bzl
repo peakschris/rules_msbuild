@@ -8,7 +8,7 @@ SDK_NAME = "dotnet_sdk"
 
 _download_sdk_attrs = {
     "version": attr.string(),
-    "nuget_repo": attr.string(mandatory = True),
+    "nuget_repo": attr.label(mandatory = True),
     "shas": attr.string_dict(),
 }
 
@@ -16,19 +16,19 @@ def msbuild_register_toolchains(version = None, shas = {}, nuget_repo = "nuget")
     if not version:
         fail('msbuild_register_toolchains: version must be a string like "3.1.100" or "host"')
 
-    if version == "host":
-        _dotnet_host_sdk(name = SDK_NAME, nuget_repo = nuget_repo)
-    else:
-        if version[0] != "6":
-            fail("cannot use version %s; dotnet 6 is required for rules_msbuild" % version)
+    # if version == "host":
+    #     _dotnet_host_sdk(name = SDK_NAME, nuget_repo = nuget_repo)
+    # else:
+    if version[0] not in ["6", "7", "8"]:
+        fail("cannot use version %s; dotnet 6/7/8 is required for rules_msbuild" % version)
 
-        _dotnet_download_sdk(
-            name = SDK_NAME,
-            version = version,
-            shas = shas,
-            nuget_repo = nuget_repo,
-        )
-    _register_toolchains(SDK_NAME)
+    dotnet_download_sdk(
+        name = SDK_NAME,
+        version = version,
+        shas = shas,
+        nuget_repo = nuget_repo,
+    )
+    # _register_toolchains(SDK_NAME)
 
 def _dotnet_host_sdk_impl(ctx):
     os, _ = detect_host_platform(ctx)
@@ -114,7 +114,7 @@ def _dotnet_download_sdk_impl(ctx):
 
     url = None
     for line in res.stdout.split("\n"):
-        if "Primary named payload URL:" in line:
+        if "- primary:" in line:
             url = line.rsplit(" ", 1)[1]
             break
 
@@ -143,7 +143,7 @@ _dotnet_host_sdk = repository_rule(
     },
 )
 
-_dotnet_download_sdk = repository_rule(
+dotnet_download_sdk = repository_rule(
     implementation = _dotnet_download_sdk_impl,
     attrs = _download_sdk_attrs,
 )
@@ -184,10 +184,12 @@ def _sdk_build_file(ctx, version):
    srcs = ["dotnet.exe"],
 )""")
 
+    nuget_repo = str(ctx.attr.nuget_repo).split("//")[0]
+    print(nuget_repo)
     deps_dict = {}
     for k in PACKAGES.keys():
         parts = k.split("/")
-        deps_dict["@{}//{}".format(ctx.attr.nuget_repo, parts[0])] = True
+        deps_dict["{}//{}".format(nuget_repo, parts[0])] = True
     builder_deps = [k for k in deps_dict.keys()]
 
     builder_tfm = default_tfm(version)
@@ -211,9 +213,9 @@ def _sdk_build_file(ctx, version):
             # the sdk has an execution time dependency on the primary nuget repo
             # all nuget repos have a loading time dependency on the dotnet binary that is downloaded with the sdk.
             # It's almost a circular dependency, but not quite.
-            "{nuget_config}": "@{}//:{}".format(ctx.attr.nuget_repo, NUGET_BUILD_CONFIG),
-            "{tfm_mapping}": "@{}//:tfm_mapping".format(ctx.attr.nuget_repo),
-            "{nuget_repo}": ctx.attr.nuget_repo,
+            "{nuget_config}": "{}//:{}".format(nuget_repo, NUGET_BUILD_CONFIG),
+            "{tfm_mapping}": "{}//:tfm_mapping".format(nuget_repo),
+            "{nuget_repo}": nuget_repo,
             "{builder_deps}": "\",\n        \"".join(builder_deps),
             "{builder_tfm}": builder_tfm,
         },

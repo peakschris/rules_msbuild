@@ -8,7 +8,7 @@ msbuild_test(
         "ParserTests.cs",
     ],
     content = ["project.assets.json"],
-    target_framework = "net5.0",
+    target_framework = "net8.0",
     deps = [
         "//dotnet/tools/NuGetParser",
         "@nuget//FluentAssertions",

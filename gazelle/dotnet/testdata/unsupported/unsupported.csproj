@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk" foo="">
 
   <PropertyGroup Condition="">
-    <TargetFramework Condition="">net5.0</TargetFramework>
+    <TargetFramework Condition="">net8.0</TargetFramework>
     <Foo Condition="">Bar</Foo>
   </PropertyGroup>
 

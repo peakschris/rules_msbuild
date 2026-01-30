@@ -1,0 +1,74 @@
+load("//tests/tools/build_test:build_test.bzl", "build_test")
+load("@rules_msbuild//dotnet:defs.bzl", "msbuild_binary")
+
+msbuild_binary(
+    name = "net80",
+    srcs = ["Program.cs"],
+    packable = True,
+    target_framework = "net8.0",
+    version = "1.2.3",
+    visibility = ["//visibility:public"],
+)
+
+build_test(
+    name = "net80_restore_test",
+    expected_files = {
+        "": [
+            "net80_restore.binlog",
+        ],
+        "restore": [
+            "project.assets.json",
+            "net80.csproj.bazel.props",
+            "net80.csproj.nuget.dgspec.json",
+            "net80.csproj.nuget.g.props",
+            "net80.csproj.nuget.g.targets",
+        ],
+    },
+)
+
+build_test(
+    name = "net80_test",
+    expected_files = {
+        "": [
+            "net80.cache",
+            # binlog & dot is only output with --define=BUILD_DIAG=1
+            "net80.binlog",
+            "net80.dot",
+        ],
+        "obj/net8.0": [
+            "net80.dll",
+        ],
+        "net8.0": [
+            # pdb is only output with compilation mode=dbg
+            "net80.pdb",
+            "net80.dll",
+            "net80.deps.json",
+            "net80.runtimeconfig.json",
+        ],
+    },
+    expected_output = "Hello Bazel!\n",
+)
+
+build_test(
+    name = "net80_publish_test",
+    expected_files = {
+        "publish/net8.0": [
+            "net80",
+            "net80.exe",
+            "net80.pdb",
+            "net80.dll",
+            "net80.deps.json",
+            "net80.runtimeconfig.json",
+        ],
+    },
+    expected_output = "Hello Bazel!\n",
+)
+
+build_test(
+    name = "net80.nupkg_test",
+    expected_files = {
+        "": [
+            "net80.1.2.3.nupkg",
+        ],
+    },
+)

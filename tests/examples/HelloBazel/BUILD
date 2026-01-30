@@ -6,7 +6,7 @@ msbuild_binary(
     srcs = ["Program.cs"],
     packable = True,
     project_file = "HelloBazel.csproj",
-    target_framework = "net6.0",
+    target_framework = "net8.0",
     version = "1.2.3",
     visibility = ["//visibility:public"],
 )
@@ -36,10 +36,10 @@ build_test(
             "HelloBazel.binlog",
             "HelloBazel.dot",
         ],
-        "obj/net6.0": [
+        "obj/net8.0": [
             "HelloBazel.dll",
         ],
-        "net6.0": [
+        "net8.0": [
             # pdb is only output with compilation mode=dbg
             "HelloBazel.pdb",
             "HelloBazel.dll",
@@ -53,7 +53,7 @@ build_test(
 build_test(
     name = "HelloBazel_publish_test",
     expected_files = {
-        "publish/net6.0": [
+        "publish/net8.0": [
             "HelloBazel",
             "HelloBazel.exe",
             "HelloBazel.pdb",

@@ -67,7 +67,7 @@ namespace RulesMSBuild.Tests.Tools
                 package = (Path.GetDirectoryName(projectName) ?? "").Replace("\\","/"),
                 label_name = Path.GetFileNameWithoutExtension(projectName) + "_" + action,
                 nuget_config = "NuGet.config",
-                tfm = "netcoreapp3.1",
+                tfm = "net8.0",
                 directory_bazel_props = "Bazel.props",
                 configuration = "dbg",
                 output_type = "lib",
@@ -242,7 +242,7 @@ namespace RulesMSBuild.Tests.Tools
             _projectFile!.AppendLine($@"<Target Name='Pack'>
     <MSBuild Projects='$(MSBuildProjectFullPath)' 
             Targets='CacheMe'
-            Properties='TargetFramework=netcoreapp3.1'
+            Properties='TargetFramework=net8.0'
     ></MSBuild>
 </Target>
 ");
@@ -396,7 +396,7 @@ namespace RulesMSBuild.Tests.Tools
             _projectPath = path != null ? Path.Combine(_context.ExecPath(path)) : _context.ProjectFile;
             _projectFile = new StringBuilder(@"<Project>
     <PropertyGroup>
-        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
     </PropertyGroup>
 
 ");

@@ -12,9 +12,9 @@ expected="
   BazelExecRoot: $PWD/@@workspace_path@@bazel-@@workspace_name@@
   BazelPackage:
   BazelExternal: $PWD/@@workspace_path@@bazel-@@workspace_name@@/external
-  OutputPath: $PWD/@@workspace_path@@dotnet-bin/net5.0/
+  OutputPath: $PWD/@@workspace_path@@dotnet-bin/net8.0/
   BaseIntermediateOutputPath: $PWD/@@workspace_path@@dotnet-bin/obj/
-  IntermediateOutputPath: $PWD/@@workspace_path@@dotnet-bin/obj/net5.0/
+  IntermediateOutputPath: $PWD/@@workspace_path@@dotnet-bin/obj/net8.0/
   BuildProjectReferences: true
 "
 actual=$(dotnet msbuild -t:PrintVars -nologo)

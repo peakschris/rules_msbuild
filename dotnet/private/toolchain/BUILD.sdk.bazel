@@ -36,7 +36,7 @@ dotnet_sdk(
 dotnet_config(
     name = "dotnet_config",
     nuget_config = "{nuget_config}",
-    test_logger = "@{nuget_repo}//:test_logger",
+    test_logger = "{nuget_repo}//:test_logger",
     tfm_mapping = "{tfm_mapping}",
     trim_path = "{trim_path}",
 )
@@ -49,7 +49,8 @@ msbuild_tool_binary(
     project_file = "@rules_msbuild//dotnet/tools/builder:Builder.csproj",
     deps = [
         "{builder_deps}"
-    ]
+    ],
+    bazel_packages = "@nuget//:bazel_packages",
 )
 
 filegroup(
