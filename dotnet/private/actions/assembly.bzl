@@ -6,15 +6,17 @@ load("@bazel_skylib//lib:paths.bzl", "paths")
 def build_assembly(ctx, dotnet):
     restore = ctx.attr.restore[DotnetRestoreInfo]
 
-    assembly = ctx.actions.declare_file(paths.join(dotnet.config.output_dir_name, restore.assembly_name + ".dll"))
-    output_dir = assembly.dirname
+    # Declare the entire output directory as a TreeArtifact for all targets (executable and library).
+    # MSBuild writes deps.json, runtimeconfig.json, and other files alongside the primary DLL into
+    # the output directory. Capturing all of them is necessary so that downstream `dotnet publish`
+    # actions (which run with NoBuild=true and copy from this path) find the expected files in the
+    # sandbox. Using a plain declare_file for the DLL alone caused MSB3030 errors because
+    # deps.json was absent from the publish sandbox.
+    assembly = ctx.actions.declare_directory(dotnet.config.output_dir_name)
 
+    # intermediate_dir is a TreeArtifact; declaring a file inside it would conflict, so we only
+    # declare the directory. MSBuild will write the intermediate .dll there as well.
     intermediate_dir = ctx.actions.declare_directory(paths.join("obj", dotnet.config.tfm))
-
-    # we don't need this file, but adding will make sure bazel fails the build if it isn't created because msbuild
-    # didn't listen to our paths
-    # print(paths.join("obj", dotnet.config.tfm, assembly.basename))
-    # intermediate_assembly = ctx.actions.declare_file(paths.join("obj", dotnet.config.tfm, assembly.basename))
 
     cache = declare_caches(ctx, "build")
     files, caches, runfiles = _process_deps(ctx, dotnet)
@@ -30,12 +32,10 @@ def build_assembly(ctx, dotnet):
     )
 
     outputs = [
-        # output_dir,
         assembly,
         ctx.actions.declare_directory("restore/_/" + dotnet.config.configuration),
         ctx.actions.declare_directory("restore/" + dotnet.config.configuration),
         intermediate_dir,
-        # intermediate_assembly,
         cache.project,
         cache.result,
     ] + cmd_outputs
@@ -52,7 +52,7 @@ def build_assembly(ctx, dotnet):
 
     info = DotnetLibraryInfo(
         assembly = assembly,
-        output_dir = output_dir,
+        output_dir = assembly,
         files = depset(direct = outputs, transitive = [inputs]),
         caches = cache_set([cache], transitive = [caches]),
         runfiles = depset(ctx.files.data, transitive = runfiles),

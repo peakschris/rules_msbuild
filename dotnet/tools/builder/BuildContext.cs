@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.Build.BackEnd;
 using RulesMSBuild.Tools.Builder.Diagnostics;
 using RulesMSBuild.Tools.Builder.MSBuild;
@@ -70,6 +71,16 @@ namespace RulesMSBuild.Tools.Builder
             IsExecutable = command.output_type == "exe";
 
             SdkRoot = ToolPath(command.sdk_root);
+
+            // csc.exe (Roslyn compiler) is a .NET app host that probes for the runtime via DOTNET_ROOT.
+            // The downloaded SDK root is two levels above the versioned sdk directory (sdk/<version> -> sdk -> dotnet root).
+            var dotnetRoot = Path.GetDirectoryName(Path.GetDirectoryName(SdkRoot))!;
+            MSBuild.BuildEnvironment["DOTNET_ROOT"] = dotnetRoot;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+                RuntimeInformation.ProcessArchitecture == Architecture.X64)
+            {
+                MSBuild.BuildEnvironment["DOTNET_ROOT_X64"] = dotnetRoot;
+            }
 
             ProjectFile = ExecPath(command.project_file);
             ProjectDirectory = Path.GetDirectoryName(ProjectFile)!;

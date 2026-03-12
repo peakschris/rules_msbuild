@@ -81,7 +81,8 @@ msbuild_binary(
         "@nuget//Microsoft.NET.StringTools",
         # gazelle-err: unsupported attribute: ExcludeAssets
         # gazelle-err: unsupported attribute: GeneratePathProperty
-        # "@nuget//SamHowes.Microsoft.Build",
-        "@nuget//Microsoft.Build",
+        "@nuget//SamHowes.Microsoft.Build",
+        # "@nuget//SamHowes.Microsoft.Build.Framework",
+        # "@nuget//Microsoft.Build",
     ],
 )

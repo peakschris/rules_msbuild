@@ -13,8 +13,14 @@ def _dotnet_toolchain_impl(ctx):
             default_dotnetarch = ctx.attr.dotnetarch,
             sdk = sdk,
             _builder = struct(
+                # assembly is now a TreeArtifact (publish/ directory) capturing all publish outputs.
                 assembly = builder_info.assembly,
+                # exe_path is the string path to the .dll inside the TreeArtifact.
+                exe_path = builder_info.exe_path,
                 files = depset(
+                    # Include the publish TreeArtifact so all publish outputs (runtimeconfig.json,
+                    # deps.json, etc.) are available in the sandboxes of downstream actions.
+                    [builder_info.assembly],
                     transitive = [sdk.runfiles],
                 ),
             ),

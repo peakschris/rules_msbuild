@@ -159,7 +159,7 @@ namespace RulesMSBuild.Tests.Tools
         {
             InitNoBuildManager();
             _cache.ConfigCache.AddConfiguration(new BuildRequestConfiguration(1,
-                new BuildRequestData($"{ReplaceMe}.csproj", new Dictionary<string, string>(), "2.0",
+                new BuildRequestData($"{ReplaceMe}.csproj", new Dictionary<string, string?>(), "2.0",
                     new []{"One"}, null, BuildRequestDataFlags.None), "what"));
 
             var result =
@@ -282,8 +282,8 @@ namespace RulesMSBuild.Tests.Tools
         private (BuildRequestConfiguration[], BuildResult[]) Aggregate()
         {
             _cache.AggregateCaches(_cachesInOrder, _caches);
-            return (_cache.ConfigCache.GetEnumerator().ToArray().OrderBy(c => c.ConfigurationId).ToArray(),
-                    _cache.ResultsCache.GetEnumerator().ToArray().OrderBy(r => r.ConfigurationId).ToArray()
+            return (_cache.ConfigCache.OfType<BuildRequestConfiguration>().OrderBy(c => c.ConfigurationId).ToArray(),
+                    _cache.ResultsCache.OfType<BuildResult>().OrderBy(r => r.ConfigurationId).ToArray()
                 );
         }
 
@@ -308,7 +308,7 @@ namespace RulesMSBuild.Tests.Tools
                 r.ConfigCache.AddConfiguration(
                     new BuildRequestConfiguration(configId,
                         new BuildRequestData(r.Label.ToString(),
-                            new Dictionary<string, string>(),
+                            new Dictionary<string, string?>(),
                             "Current", new []{"build"}, null),
                         "Current"));
             }

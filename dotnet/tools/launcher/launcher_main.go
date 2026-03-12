@@ -10,9 +10,27 @@ import (
 	"strings"
 )
 
+func fileExists(p string) bool {
+	_, err := os.Stat(p)
+	return err == nil
+}
+
 func main() {
 	diag(func() { fmt.Printf("launcher args: %s\n", strings.Join(os.Args, ",")) })
-	launchInfo, err := GetLaunchInfo(os.Args[0])
+
+	// Get the actual executable path
+	// os.Args[0] might just be the basename when run through bash, so use os.Executable() instead
+	execPath, err := os.Executable()
+	if err != nil {
+		// Fallback to os.Args[0] if os.Executable() fails
+		execPath, err = filepath.Abs(os.Args[0])
+		// check if exexPath exists, if not panic with the original error
+		if err != nil || !fileExists(execPath) {
+			panic(fmt.Sprintf("failed to get executable path: %v", err))
+		}
+	}
+
+	launchInfo, err := GetLaunchInfo(execPath)
 	if err != nil {
 		panic(fmt.Sprintf("failed to get launch info: %s", err))
 	}

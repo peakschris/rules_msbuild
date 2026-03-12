@@ -57,7 +57,7 @@ def _test_config_impl(ctx):
     assembly_name = ""
     is_publish = False
     if DotnetPublishInfo in ctx.attr.target:
-        assembly_name = ctx.attr.target[DotnetPublishInfo].library.assembly.basename
+        assembly_name = ctx.attr.target[DotnetPublishInfo].restore.assembly_name + ".dll"
         is_publish = True
 
     ctx.actions.expand_template(

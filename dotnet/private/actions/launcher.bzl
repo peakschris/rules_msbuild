@@ -12,10 +12,22 @@ def make_launcher(ctx, dotnet, info):
 
     is_bin_launcher = dotnet.os == "windows"
 
+    # For executable/test targets, info.assembly is a TreeArtifact (declare_directory) covering
+    # the entire net10.0/ output dir (captures all NuGet copy-local DLLs, runtimeconfig.json, etc.).
+    # Derive the dll and output_dir paths from the tree path.
+    # For library targets, info.assembly is a plain .dll File — use it directly.
+    if info.executable:
+        assembly_dir_path = to_manifest_path(ctx, info.assembly)
+        target_bin_path = assembly_dir_path + "/" + info.restore.assembly_name + ".dll"
+        output_dir_path = assembly_dir_path
+    else:
+        target_bin_path = to_manifest_path(ctx, info.assembly)
+        output_dir_path = to_manifest_path(ctx, info.assembly)
+
     launch_data = {
         "dotnet_bin_path": to_manifest_path(ctx, sdk.dotnet),
-        "target_bin_path": to_manifest_path(ctx, info.assembly),
-        "output_dir": to_manifest_path(ctx, info.assembly)+"/..",
+        "target_bin_path": target_bin_path,
+        "output_dir": output_dir_path,
         "dotnet_root": sdk.root_file.dirname,
         "dotnet_args": _format_launcher_args([], is_bin_launcher),
         "assembly_args": _format_launcher_args([], is_bin_launcher),
@@ -48,7 +60,7 @@ def make_launcher(ctx, dotnet, info):
     if is_bin_launcher:
         args = ctx.actions.args()
         args.add_all([
-            dotnet.builder.assembly,
+            dotnet.builder.exe_path,
             "launcher",
             launcher_template,
             launcher,

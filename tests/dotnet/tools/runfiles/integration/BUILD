@@ -19,7 +19,7 @@ build_test(
         "publish/net10.0/DotnetCat.dll.runfiles": [
             "MANIFEST",
         ],
-        "publish/net8.0/DotnetCat.dll.runfiles/rules_msbuild/tests/dotnet/tools/runfiles/integration": [
+        "publish/net10.0/DotnetCat.dll.runfiles/_main/tests/dotnet/tools/runfiles/integration": [
             "foo.txt",
         ],
     },

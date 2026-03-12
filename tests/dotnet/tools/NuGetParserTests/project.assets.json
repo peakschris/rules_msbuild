@@ -49,11 +49,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/private/var/tmp/_bazel_samh/a705d517d88afdea3382b9f4ddefe755/external/nuget/fetch/net10.0.3.proj",
-      "projectName": "net10.0.3",
-      "projectPath": "/private/var/tmp/_bazel_samh/a705d517d88afdea3382b9f4ddefe755/external/nuget/fetch/net10.0.3.proj",
+      "projectUniqueName": "/private/var/tmp/_bazel_samh/a705d517d88afdea3382b9f4ddefe755/external/nuget/fetch/net10.0.2.proj",
+      "projectName": "net10.0.2",
+      "projectPath": "/private/var/tmp/_bazel_samh/a705d517d88afdea3382b9f4ddefe755/external/nuget/fetch/net10.0.2.proj",
       "packagesPath": "/private/var/tmp/_bazel_samh/a705d517d88afdea3382b9f4ddefe755/external/nuget/packages",
-      "outputPath": "/private/var/tmp/_bazel_samh/a705d517d88afdea3382b9f4ddefe755/external/nuget/fetch/_obj/net10.0.3/",
+      "outputPath": "/private/var/tmp/_bazel_samh/a705d517d88afdea3382b9f4ddefe755/external/nuget/fetch/_obj/net10.0.2/",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "/usr/local/share/dotnet/sdk/NuGetFallbackFolder"

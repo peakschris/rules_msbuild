@@ -37,7 +37,8 @@ func SetupFakeRunfiles(t *testing.T, binName string) string {
 		t.Fatalf("failed to create tmp dir: %v", err)
 	}
 
-	fakeRunfilesDir := path.Join(tmpDir, binName+".runfiles")
+	baseName := path.Base(binName)
+	fakeRunfilesDir := path.Join(tmpDir, baseName+".runfiles")
 	thisRunfilesDir := files.ComputeRunfilesDir(os.Args[0])
 	err = shutil.CopyTree(thisRunfilesDir, fakeRunfilesDir, nil)
 	t.Logf("created runfiles tree at: %s\n", fakeRunfilesDir)
@@ -45,7 +46,7 @@ func SetupFakeRunfiles(t *testing.T, binName string) string {
 		t.Fatalf("failed to create new runfiles tree: %v", err)
 	}
 
-	binPath := path.Join(path.Dir(fakeRunfilesDir), files.BinName(binName))
+	binPath := path.Join(path.Dir(fakeRunfilesDir), files.BinName(baseName))
 	srcBin, _ := files.BinPath(binName)
 	t.Logf("srcBin %s\n", srcBin)
 	newPath, err := shutil.Copy(srcBin, binPath, true)

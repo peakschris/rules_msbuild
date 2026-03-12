@@ -147,7 +147,13 @@ func TestExecutableOutput(t *testing.T) {
 	}
 
 	if config.RunLocation == "standard" {
-		config.Target = lib.SetupFakeRunfiles(t, path.Base(config.Target))
+		// Extract the relative path from package to the target for SetupFakeRunfiles
+		ind := strings.Index(config.Target, config.Package)
+		if ind == -1 {
+			t.Fatalf("package not found in target path: %s", config.Target)
+		}
+		relPath := config.Target[ind+len(config.Package)+1:]
+		config.Target = lib.SetupFakeRunfiles(t, relPath)
 		config.Cwd = files.ComputeStartingDir(config.Target)
 		t.Logf("Computed starting dir to: \n%s", config.Cwd)
 	}

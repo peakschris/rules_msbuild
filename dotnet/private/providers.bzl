@@ -24,7 +24,8 @@ DotnetRestoreInfo = provider(
 DotnetLibraryInfo = provider(
     doc = "Contains information about a Dotnet library",
     fields = {
-        "assembly": "The primary assembly that was compiled",
+        "assembly": "The primary assembly (File) or publish TreeArtifact (directory) that was compiled",
+        "exe_path": "Optional string: absolute exec-root path to the runnable .dll inside a publish TreeArtifact, set only for tool binaries built with build_tool_binary",
         "output_dir": "The msbuild output directory as a declared file",
         "runfiles": "",
         "files": "depset of files",

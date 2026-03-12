@@ -154,7 +154,7 @@ namespace BzlTests
         {
             _runfiles = Runfiles.Create();
 
-            var list = _runfiles.ListRunfiles("rules_msbuild/tests/dotnet/tools/BzlTests/testdata").ToList();
+            var list = _runfiles.ListRunfiles("_main/tests/dotnet/tools/BzlTests/testdata").ToList();
             var first = list.First();
             _basePath = first[..(first.IndexOf("testdata", StringComparison.Ordinal) + "testdata".Length)];
 

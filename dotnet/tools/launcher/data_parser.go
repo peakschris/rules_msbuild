@@ -50,10 +50,23 @@ func (l *LaunchInfo) GetRunfile(p string) string {
 func (l *LaunchInfo) GetBuiltPath(key string) string {
     outputDir := l.GetItem("output_dir")
     value := l.GetItem(key)
-	diag(func() { fmt.Printf("findng built path: %s using prefix %s\n", value, outputDir) })
-	value = value[len(outputDir)+1:]
+
+	diag(func() { fmt.Printf("finding built path: %s using prefix %s\n", value, outputDir) })
+
+    trimmed := value
+    if strings.HasPrefix(value, outputDir) {
+        trimmed = value[len(outputDir):]
+        // If trimmed starts with a separator, remove it
+        if len(trimmed) > 0 && (trimmed[0] == '/' || trimmed[0] == '\\') {
+            trimmed = trimmed[1:]
+        }
+    } else {
+        fmt.Fprintf(os.Stderr, "[WARN] value %q does not start with output_dir %q\n", value, outputDir)
+        // Optionally leave trimmed as value, or take other action
+    }
+
     outputDirPath := l.GetRunfile(outputDir)
-	return path.Join(outputDirPath, value)
+    return path.Join(outputDirPath, trimmed)
 }
 
 func GetLaunchInfo(binaryPath string) (*LaunchInfo, error) {

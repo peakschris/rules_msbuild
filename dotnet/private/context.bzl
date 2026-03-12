@@ -111,9 +111,8 @@ def _make_env(dotnet_sdk_root, os):
         "DOTNET_NOLOGO": "1",
         # "NUGET_SHOW_STACK": "true",
         # "BUILDER_DEBUG": "1",
+        "OS": "Windows_NT", # https://github.com/dotnet/aspnetcore/issues/27990
         "RULES_MSBUILD_VERSION": VERSION,
-        "PATHEXT": "COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC",
-        "PATH": "C:\\WINDOWS\\system32;C:\\WINDOWS"
     }
 
     if os not in NUGET_ENVIRONMENTS:
@@ -136,7 +135,7 @@ def make_builder_cmd(ctx, dotnet, action, directory_info, assembly_name):
     workspace = ctx.label.workspace_name
     args = ctx.actions.args()
     args.add_all([
-        dotnet.builder.assembly.path,
+        dotnet.builder.exe_path,
         action,
         "--sdk_root",
         dotnet.sdk.sdk_root.path,
@@ -162,8 +161,8 @@ def make_builder_cmd(ctx, dotnet, action, directory_info, assembly_name):
         dotnet.config.configuration,
         "--output_type",
         "exe" if dotnet.config.is_executable else "library",
-        # "--directory",
-        # [s for s in directory_info.srcs],
+        "--directory",
+        [s for s in directory_info.srcs],
         "--assembly_name",
         assembly_name,
     ])

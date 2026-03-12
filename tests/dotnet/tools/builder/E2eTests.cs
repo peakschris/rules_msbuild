@@ -203,7 +203,9 @@ namespace RulesMSBuild.Tests.Tools
 
             BuildAndVerifyTargets("foo:Publish");
 
-            VerifyCachedTargets("foo:Publish");
+            // When building Publish which depends on cached targets Build and CacheMe,
+            // the BuildResult includes all targets that were part of the execution
+            VerifyCachedTargets("foo:Build", "foo:CacheMe", "foo:Publish");
         }
 
         [Fact]
@@ -296,9 +298,12 @@ namespace RulesMSBuild.Tests.Tools
                 );
 
             // make sure we stored the results from foo in our current cache
+            // BuildResults include all targets executed, including cached ones
             VerifyCachedTargets(
                 "bar:Build",
                 "bar:BuildReference",
+                "foo:Build",
+                "foo:CacheMe",
                 // this final target is not supported by stock MSBuild because it mixes results for configurations
                 "foo:ReferenceMe");
 
@@ -338,15 +343,16 @@ namespace RulesMSBuild.Tests.Tools
         {
             WriteCacheManifest(_context.ProjectFile);
             var cache = new BuildCache(new Label("_", "_", "_"), null!, new Files(), null) {Manifest = _nextManifest};
-            var (caches, _) = cache.DeserializeCaches();
 
-            // we want the most recent results
-            var last = caches[_context.Bazel.Label.ToString()];
-
-            // but we need all the configs to get the ProjectFullPath
+            // Initialize to load all caches so we have access to ConfigCache
             cache.Initialize(_nextManifestPath!, null);
+
+            // Load only the result file that was just saved (the output from the last build)
+            var outputResultPath = _nextManifest.Output.Result;
+            var lastResult = cache.DeserializeResult(outputResultPath);
+
             var cached = (
-                from result in last.Results
+                from result in lastResult.Results
                 let config = cache.ConfigCache[result.ConfigurationId]
                 from targetName in result.ResultsByTarget.Keys
                 let shortName = Path.GetFileNameWithoutExtension(config.ProjectFullPath)
@@ -354,9 +360,7 @@ namespace RulesMSBuild.Tests.Tools
 
             cached = cached.OrderBy(c => c).ToList();
             cached.Should().Equal(expectations);
-        }
-
-        private void BuildAndVerifyTargets(params string[] expectedTargets)
+        }        private void BuildAndVerifyTargets(params string[] expectedTargets)
         {
             var result = _builder.Build();
             result.Should().Be(0);

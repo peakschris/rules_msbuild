@@ -32,12 +32,20 @@ func LaunchDotnet(args []string, info *LaunchInfo) {
 	dotnetEnv := info.GetItem("dotnet_env")
 
 	for _, line := range strings.Split(dotnetEnv, ";") {
-		equals := strings.IndexRune(line, '=')
-		if equals <= 0 {
-			panic(fmt.Errorf("malformed dotnet environment line: %s", line))
+		key, value, found := strings.Cut(line, "=")
+		if !found || key == "" {
+			// Skip malformed lines (no '=', empty key, or blank line)
+			continue
 		}
-		_ = os.Setenv(line[0:equals], line[equals+1:])
+		// Trim leading/trailing whitespace from key/value for safety
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		if err := os.Setenv(key, value); err != nil {
+			// Log error but continue (or panic if strictness required)
+			log.Printf("Failed to set env %s: %v", key, err)
 		}
+	}
+
 
 	workspace := info.GetItem("workspace_name")
 	pkg := info.GetItem("package")

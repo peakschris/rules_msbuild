@@ -8,6 +8,9 @@ msbuild_binary(
     project_file = "HelloBazel.csproj",
     target_framework = "net10.0",
     version = "1.2.3",
+    deps = [
+        "@nuget//SamHowes.Microsoft.Build",
+    ],
     visibility = ["//visibility:public"],
 )
 

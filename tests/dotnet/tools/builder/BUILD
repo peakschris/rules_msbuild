@@ -26,6 +26,7 @@ msbuild_test(
         "@nuget//Microsoft.NET.Test.Sdk",
         "@nuget//Moq",
         "@nuget//SamHowes.Microsoft.Build",
+        "@nuget//SamHowes.Microsoft.Build.Framework",
         "@nuget//xunit.assert",
         "@nuget//xunit.console",
         "@nuget//xunit.core",
