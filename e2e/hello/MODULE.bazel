@@ -30,7 +30,7 @@ dotnet_sdk.toolchain(
     shas = {
         "windows_amd64": "7be3174702eed0e9fb7d8bf12e47f3557e25daaa4a6454719b5797b270078836",
     },
-    version = "8.0.116",
+    version = "10.0.103",
 )
 use_repo(dotnet_sdk, "dotnet_sdk")
 
@@ -40,40 +40,40 @@ nuget = use_extension("@rules_msbuild//dotnet:extensions.bzl", "nuget")
 nuget.fetch(
     name = "nuget",
     packages = {
-        "CommandLineParser/2.8.0": ["net8.0"],
-        "RulesMSBuild.Runfiles/": ["net8.0"],
+        "CommandLineParser/2.8.0": ["net10.0"],
+        "RulesMSBuild.Runfiles/": ["net10.0"],
         "FluentAssertions/5.10.3": [
-            "net8.0",
+            "net10.0",
         ],
-        "Grpc.AspNetCore/2.40.0": ["net8.0"],
-        "Grpc.Net.Client/2.40.0": ["net8.0"],
-        "Microsoft.Build.Tasks.Core/17.11.48": ["net8.0"],
-        "Microsoft.Build.Utilities.Core/17.11.48": ["net8.0"],
-        "Microsoft.NET.StringTools/17.11.48": ["net8.0"],
+        "Grpc.AspNetCore/2.40.0": ["net10.0"],
+        "Grpc.Net.Client/2.40.0": ["net10.0"],
+        "Microsoft.Build.Tasks.Core/17.11.48": ["net10.0"],
+        "Microsoft.Build.Utilities.Core/17.11.48": ["net10.0"],
+        "Microsoft.NET.StringTools/17.11.48": ["net10.0"],
         "Microsoft.NET.Test.Sdk/16.7.1": [
-            "net8.0",
+            "net10.0",
         ],
         "Moq/4.16.1": [
-            "net8.0",
+            "net10.0",
         ],
-        "Newtonsoft.Json/13.0.1": ["net8.0"],
-        "Microsoft.Build/17.11.48": ["net8.0"],
-        "SharpZipLib/1.3.3": ["net8.0"],
-        "System.Security.Principal/4.3.0": ["net8.0"],
-        "coverlet.collector/1.3.0": ["net8.0"],
-        "xunit.assert/2.4.1": ["net8.0"],
-        "xunit.console/2.4.1": ["net8.0"],
-        "xunit.core/2.4.1": ["net8.0"],
-        "xunit.extensibility.core/2.4.1": ["net8.0"],
+        "Newtonsoft.Json/13.0.1": ["net10.0"],
+        "Microsoft.Build/17.11.48": ["net10.0"],
+        "SharpZipLib/1.3.3": ["net10.0"],
+        "System.Security.Principal/4.3.0": ["net10.0"],
+        "coverlet.collector/1.3.0": ["net10.0"],
+        "xunit.assert/2.4.1": ["net10.0"],
+        "xunit.console/2.4.1": ["net10.0"],
+        "xunit.core/2.4.1": ["net10.0"],
+        "xunit.extensibility.core/2.4.1": ["net10.0"],
         "xunit.runner.visualstudio/2.4.3": [
-            "net8.0",
+            "net10.0",
         ],
         "xunit/2.4.1": [
-            "net8.0",
+            "net10.0",
         ],
     },
     target_frameworks = [
-        "net8.0",
+        "net10.0",
     ],
     use_host = True,
     dotnet_sdk_root = "@dotnet_sdk//:ROOT",

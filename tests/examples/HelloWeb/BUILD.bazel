@@ -14,21 +14,21 @@ msbuild_binary(
     ] + glob(["wwwroot/**"]),
     data = glob(["wwwroot/**"]),
     project_file = "HelloWeb.csproj",
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     visibility = ["//visibility:public"],
 )
 
 build_test(
     name = "HelloWeb_test",
     expected_files = {
-        "net8.0": [
+        "net10.0": [
             "appsettings.json",
             "appsettings.Development.json",
         ],
-        "restore/_/$(Configuration)/net8.0": [
+        "restore/_/$(Configuration)/net10.0": [
             "staticwebassets.build.json",
         ],
-        "restore/$(Configuration)/net8.0": [
+        "restore/$(Configuration)/net10.0": [
             "staticwebassets.build.json",
         ],
     },
@@ -39,7 +39,7 @@ build_test(
 build_test(
     name = "HelloWeb_publish_test",
     expected_files = {
-        "publish/net8.0": [
+        "publish/net10.0": [
             "appsettings.json",
             "appsettings.Development.json",
             "HelloWeb.deps.json",
@@ -48,7 +48,7 @@ build_test(
             "HelloWeb.runtimeconfig.json",
             "web.config",
         ],
-        "publish/net8.0/wwwroot": [
+        "publish/net10.0/wwwroot": [
             "foo.txt",
         ],
     },

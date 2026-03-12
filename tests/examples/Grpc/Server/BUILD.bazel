@@ -13,7 +13,7 @@ msbuild_binary(
         "appsettings.Development.json",
         "appsettings.json",
     ],
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     visibility = ["//visibility:public"],
     deps = [
         "//tests/examples/Grpc/Protos:Protos.Net",
@@ -24,7 +24,7 @@ msbuild_binary(
 build_test(
     name = "Server_test",
     expected_files = {
-        "net8.0": [
+        "net10.0": [
             "Google.Protobuf.dll",
             "Grpc.AspNetCore.Server.ClientFactory.dll",
             "Grpc.AspNetCore.Server.dll",

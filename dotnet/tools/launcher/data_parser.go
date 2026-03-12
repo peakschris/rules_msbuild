@@ -48,11 +48,11 @@ func (l *LaunchInfo) GetRunfile(p string) string {
 // this means that the output directory is listed in the runfiles manifest, and since the output directory is a prefix
 // of all the items in the output directory, the actual output items are not listed explicitly in the manifest
 func (l *LaunchInfo) GetBuiltPath(key string) string {
-	outputDir := l.GetItem("output_dir")
-	value := l.GetItem(key)
+    outputDir := l.GetItem("output_dir")
+    value := l.GetItem(key)
 	diag(func() { fmt.Printf("findng built path: %s using prefix %s\n", value, outputDir) })
 	value = value[len(outputDir)+1:]
-	outputDirPath := l.GetRunfile(outputDir)
+    outputDirPath := l.GetRunfile(outputDir)
 	return path.Join(outputDirPath, value)
 }
 

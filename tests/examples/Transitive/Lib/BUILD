@@ -5,7 +5,7 @@ msbuild_library(
     name = "Lib",
     srcs = ["LibClass.cs"],
     project_file = "Lib.csproj",
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     visibility = ["//tests/examples/Transitive/Binary:__pkg__"],
     deps = [
         "//tests/examples/Transitive/TransitiveLib",
@@ -15,7 +15,7 @@ msbuild_library(
 build_test(
     name = "Lib_test",
     expected_files = {
-        "net8.0": [
+        "net10.0": [
             "Lib.dll",
             "Lib.pdb",
             "TransitiveLib.pdb",

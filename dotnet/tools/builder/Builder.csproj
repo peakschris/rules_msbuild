@@ -24,7 +24,7 @@
     <PackageReference Include="Microsoft.Build.Locator" Version="1.10.2" />
     <PackageReference Include="Microsoft.NET.StringTools" Version="17.11.48" />
     <PackageReference Include="SamHowes.Microsoft.Build" Version="17.11.48" ExcludeAssets="Runtime" GeneratePathProperty="true" />
-     <!-- Make sure msbuild only copies this exact dll and no dependencies. 
+     <!-- Make sure msbuild only copies this exact dll and no dependencies.
     <None Include="$(PkgSamHowes_Microsoft_Build)/lib/**/*.dll">
       <Link>%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

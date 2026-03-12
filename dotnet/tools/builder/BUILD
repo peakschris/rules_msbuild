@@ -71,7 +71,7 @@ msbuild_binary(
     ],
     assembly_name = "builder",
     project_file = "Builder.csproj",
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     visibility = ["//:__subpackages__"],
     deps = [
         "@nuget//CommandLineParser",

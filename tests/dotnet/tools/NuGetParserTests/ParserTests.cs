@@ -66,7 +66,7 @@ namespace NuGetParserTests
         {
             _context.Frameworks = new List<FrameworkInfo>()
             {
-                new("net8.0")
+                new("net10.0")
                 {
                     RestoreGroups = new List<FrameworkRestoreGroup>()
                     {
@@ -103,7 +103,7 @@ namespace NuGetParserTests
                         },
                         Deps = new Dictionary<string, List<PackageId>>()
                         {
-                            ["net8.0"] = new()
+                            ["net10.0"] = new()
                             {
                                 new PackageId("NETStandard.Library/1.0.0")
                             }
@@ -120,7 +120,7 @@ namespace NuGetParserTests
                         },
                         Deps = new Dictionary<string, List<PackageId>>()
                         {
-                            ["net8.0"] = new()
+                            ["net10.0"] = new()
                             {
                                 new PackageId("NETStandard.Library/2.0.0")
                             }
@@ -189,17 +189,17 @@ namespace NuGetParserTests
             commandLine.Versions.Keys.Should().Equal("2.8.0", "2.9.0-preview1");
 
             var standard = commandLine.Versions["2.8.0"];
-            standard.Deps["net8.0"].Select(d => d.String).Should().Equal("NETStandard.Library/1.0.0");
+            standard.Deps["net10.0"].Select(d => d.String).Should().Equal("NETStandard.Library/1.0.0");
 
             var preview = commandLine.Versions["2.9.0-preview1"];
-            preview.Deps["net8.0"].Select(d => d.String).Should().Equal("NETStandard.Library/2.0.0");
+            preview.Deps["net10.0"].Select(d => d.String).Should().Equal("NETStandard.Library/2.0.0");
         }
 
         [Fact]
         public void VersionUpgrade_Works()
         {
             SetupVersionUpgrade();
-            
+
             _parser.Parse();
 
             _context.AllPackages.Keys.Should().Equal(PackageName, ImplicitDepName);
@@ -214,7 +214,7 @@ namespace NuGetParserTests
             var package = _context.AllPackages[PackageName];
             var packageVersion = package.Versions.Values.Single();
             var dep = packageVersion.Deps.Values.Single().Single();
-            
+
             // this package dep should be auto-upgraded to the actually downloaded version
             dep.Version.Should().Be(version.Id.Version);
         }
@@ -237,18 +237,18 @@ namespace NuGetParserTests
 
             packages.Keys.Should().Equal(PackageName, ImplicitFrameworkName);
 
-            
+
             // both should have a TFM in their deps to explicitly say they don't have any deps for that tfm
             var package = packages[ImplicitFrameworkName];
             package.Versions.Keys.Should().Equal("3.1.0");
             var version = package.Versions.Values.Single();
-            version.Deps.Keys.Should().Equal("net8.0");
+            version.Deps.Keys.Should().Equal("net10.0");
 
 
             package = packages[PackageName];
             package.Versions.Keys.Should().Equal("2.8.0");
             version = package.Versions.Values.Single();
-            version.Deps.Keys.Should().Equal("net8.0");
+            version.Deps.Keys.Should().Equal("net10.0");
 
         }
 
@@ -269,7 +269,7 @@ namespace NuGetParserTests
                         },
                         Deps = new Dictionary<string, List<PackageId>>()
                         {
-                            ["net8.0"] = new()
+                            ["net10.0"] = new()
                         }
                     }
                 }
@@ -278,13 +278,13 @@ namespace NuGetParserTests
 
         private static PackageVersion DefaultPackageVersion(bool addDeps=true)
         {
-            var tfm = "net8.0";
+            var tfm = "net10.0";
             var v = new PackageVersion("CommandLineParser/2.8.0")
             {
                 AllFiles = new List<string>() {"foo"},
                 Deps = new Dictionary<string, List<PackageId>>(){[tfm] = new()}
             };
-            
+
             if (addDeps)
             {
                 v.Deps[tfm] = new List<PackageId>()
@@ -300,7 +300,7 @@ namespace NuGetParserTests
         {
             _context.Frameworks = new List<FrameworkInfo>()
             {
-                new("net8.0")
+                new("net10.0")
                 {
                     RestoreGroups = new List<FrameworkRestoreGroup>()
                     {
@@ -322,7 +322,7 @@ namespace NuGetParserTests
         {
             _context.Frameworks = new List<FrameworkInfo>()
             {
-                new("net8.0")
+                new("net10.0")
                 {
                     RestoreGroups = new List<FrameworkRestoreGroup>()
                     {
@@ -338,7 +338,7 @@ namespace NuGetParserTests
                 }
             };
             _files.Setup(f => f.GetContents(Path.Combine("second", "project.assets.json")))
-                .Returns(AssetsFactory.Make("net8.0", "2.8.0", null));
+                .Returns(AssetsFactory.Make("net10.0", "2.8.0", null));
         }
     }
 

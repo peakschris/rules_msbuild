@@ -14,7 +14,7 @@ msbuild_test(
         "TestProgram.cs",
     ],
     dotnet_cmd = "exec",
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     test_env = {
         "BAZEL_DOTNET_SDKROOT": "$(BAZEL_DOTNET_SDKROOT)",
     },

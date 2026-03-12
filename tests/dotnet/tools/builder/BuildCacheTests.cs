@@ -42,7 +42,7 @@ namespace RulesMSBuild.Tests.Tools
 
         public void ReallyDispose() => base.Dispose();
     }
-    
+
     [Collection(BuildFrameworkTestCollection.TestCollectionName)]
     public class BuildCacheTests : IDisposable
     {
@@ -67,19 +67,19 @@ namespace RulesMSBuild.Tests.Tools
                 .Returns<string>(str => str.Replace(ReplaceMe, Yay));
             _pathMapper.Setup(p => p.FromBazel(It.IsAny<string>()))
                 .Returns<string>(str => str.Replace(Yay, Restored));
-            
+
             _pathMapper.Setup(p => p.ToManifestPath(It.IsAny<string>()))
                 .Returns("foo");
             _pathMapper.Setup(p => p.ToAbsolute(It.IsAny<string>()))
                 .Returns("foo");
-            
+
             _files = new Mock<Files>();
             _files.Setup(f => f.Exists(It.IsAny<string>())).Returns<string>((path) =>
             {
                 if (path == DoesNotExist) return false;
                 return _written?.Length > 0;
             });
-                
+
             ResetCache();
             _originalEnv = new Dictionary<object, object?>();
             foreach (DictionaryEntry entry in Environment.GetEnvironmentVariables())
@@ -88,7 +88,7 @@ namespace RulesMSBuild.Tests.Tools
                     _originalEnv[entry.Key] = entry.Value;
                     Environment.SetEnvironmentVariable((entry.Key as string)!, null);
                 }
-            
+
             _written = new UnclosableMemoryStream();
             _files.Setup(f => f.Create(It.IsAny<string>())).Returns(_written);
             _files.Setup(f => f.OpenRead(It.IsAny<string>())).Returns(_written);
@@ -102,7 +102,7 @@ namespace RulesMSBuild.Tests.Tools
                 return new StreamReader(_written).ReadToEnd();
             });
             _disposables = new List<IDisposable>(){_written};
-            
+
         }
 
         private void ResetCache()
@@ -138,14 +138,14 @@ namespace RulesMSBuild.Tests.Tools
             str.Should().NotContain(ReplaceMe);
             _written.Seek(0, SeekOrigin.Begin);
         }
-        
+
         [Fact]
         public void ReadFile_RestoresPaths()
         {
             SaveFile_ReplacesPaths();
-            
+
             ResetCache();
-            
+
             var project = _cache.LoadProject("foo");
 
             var path = project!.Properties.FirstOrDefault(p => p.Name == "FilePath");
@@ -159,7 +159,7 @@ namespace RulesMSBuild.Tests.Tools
         {
             InitNoBuildManager();
             _cache.ConfigCache.AddConfiguration(new BuildRequestConfiguration(1,
-                new BuildRequestData($"{ReplaceMe}.csproj", new Dictionary<string, string>(), "2.0", 
+                new BuildRequestData($"{ReplaceMe}.csproj", new Dictionary<string, string>(), "2.0",
                     new []{"One"}, null, BuildRequestDataFlags.None), "what"));
 
             var result =
@@ -174,14 +174,14 @@ namespace RulesMSBuild.Tests.Tools
             _cache.Save("foo");
             VerifyWrittenStrings();
         }
-        
+
         [Fact]
         public void LoadResult_RestoresPaths()
         {
             SaveResult_ReplacesPaths();
             ResetCache();
             _cache.Initialize(Manifest, null);
-    
+
             var result = _cache.ResultsCache.ResultsDictionary.Single().Value;
             result.ResultsByTarget.Count.Should().Be(1);
             var targetResult = result.ResultsByTarget.Values.Single();
@@ -204,7 +204,7 @@ namespace RulesMSBuild.Tests.Tools
             config[0].ConfigurationId.Should().Be(1);
             result[0].ConfigurationId.Should().Be(1);
         }
-        
+
         [Fact]
         public void Aggregate_MultipleSources()
         {
@@ -226,7 +226,7 @@ namespace RulesMSBuild.Tests.Tools
             _cache.Result.ConfigMap[1].Should().Be(first.Label.ToString());
             _cache.Result.ConfigMap[2].Should().Be(second.Label.ToString());
         }
-        
+
         [Fact]
         public void Aggregate_MixedResults()
         {
@@ -240,9 +240,9 @@ namespace RulesMSBuild.Tests.Tools
 
             var (config, result) = Aggregate();
             config.Length.Should().Be(2);
-            
+
             // length should be two because the cache should merge the results
-            result.Length.Should().Be(2); 
+            result.Length.Should().Be(2);
             config[0].ConfigurationId.Should().Be(1);
             result[0].ConfigurationId.Should().Be(1);
             config[1].ConfigurationId.Should().Be(2);
@@ -251,7 +251,7 @@ namespace RulesMSBuild.Tests.Tools
             result[0].ResultsByTarget.Keys.OrderBy(k => k).Should().Equal("Build", "BuildReference");
             result[1].ResultsByTarget.Keys.OrderBy(k => k).Should().Equal("Build");
 
-            
+
             _cache.Result.ConfigMap[1].Should().Be(first.Label.ToString());
             _cache.Result.OriginalIds[1].Should().Be(1);
             first.NewIds[1].Should().Be(1);
@@ -268,7 +268,7 @@ namespace RulesMSBuild.Tests.Tools
                 null!
             );
             _cache.Initialize(DoesNotExist, null);
-            
+
             _cache.Result.ConfigCache = _cache.ConfigCache;
             _cache.Manifest = new CacheManifest()
             {
@@ -286,7 +286,7 @@ namespace RulesMSBuild.Tests.Tools
                     _cache.ResultsCache.GetEnumerator().ToArray().OrderBy(r => r.ConfigurationId).ToArray()
                 );
         }
-        
+
         private LabelResult Result(string name)
         {
             var r = new LabelResult
@@ -307,12 +307,12 @@ namespace RulesMSBuild.Tests.Tools
             {
                 r.ConfigCache.AddConfiguration(
                     new BuildRequestConfiguration(configId,
-                        new BuildRequestData(r.Label.ToString(), 
-                            new Dictionary<string, string>(), 
+                        new BuildRequestData(r.Label.ToString(),
+                            new Dictionary<string, string>(),
                             "Current", new []{"build"}, null),
                         "Current"));
             }
-            
+
 
             if (other != null)
             {
@@ -321,10 +321,10 @@ namespace RulesMSBuild.Tests.Tools
             }
             else
             {
-                r.OriginalIds[configId] = configId;    
+                r.OriginalIds[configId] = configId;
             }
-            
-            
+
+
             var silly = new BuildResult();
             silly.AddResultsForTarget(targetName, new TargetResult(Array.Empty<ProjectItemInstance.TaskItem>(), new WorkUnitResult()));
             var actual = new BuildResult(silly, -1, configId, -1, -1, -1);
@@ -343,7 +343,7 @@ namespace RulesMSBuild.Tests.Tools
             {
                 if (disposable is IObscureDisposable obscure)
                     obscure.ReallyDispose();
-                else 
+                else
                     disposable.Dispose();
             }
         }

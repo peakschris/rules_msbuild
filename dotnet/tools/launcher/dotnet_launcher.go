@@ -37,7 +37,7 @@ func LaunchDotnet(args []string, info *LaunchInfo) {
 			panic(fmt.Errorf("malformed dotnet environment line: %s", line))
 		}
 		_ = os.Setenv(line[0:equals], line[equals+1:])
-	}
+		}
 
 	workspace := info.GetItem("workspace_name")
 	pkg := info.GetItem("package")

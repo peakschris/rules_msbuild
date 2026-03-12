@@ -8,7 +8,7 @@ msbuild_binary(
         "Startup.cs",
     ],
     protos = ["//tests/examples/Grpc/Simple/Protos:greet_proto"],
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     visibility = ["//visibility:public"],
     deps = ["@nuget//Grpc.AspNetCore"],
 )

@@ -5,7 +5,7 @@ msbuild_binary(
     name = "Greeter",
     srcs = ["Greeter.cs"],
     project_file = "Greeter.csproj",
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     visibility = ["//visibility:public"],
 )
 

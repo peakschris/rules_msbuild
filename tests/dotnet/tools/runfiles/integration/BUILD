@@ -6,7 +6,7 @@ msbuild_binary(
     name = "DotnetCat",
     srcs = ["DotnetCat.cs"],
     data = ["foo.txt"],
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     visibility = ["//visibility:public"],
     deps = [
         "//dotnet/tools/Runfiles",
@@ -16,7 +16,7 @@ msbuild_binary(
 build_test(
     name = "DotnetCat_publish_test",
     expected_files = {
-        "publish/net8.0/DotnetCat.dll.runfiles": [
+        "publish/net10.0/DotnetCat.dll.runfiles": [
             "MANIFEST",
         ],
         "publish/net8.0/DotnetCat.dll.runfiles/rules_msbuild/tests/dotnet/tools/runfiles/integration": [

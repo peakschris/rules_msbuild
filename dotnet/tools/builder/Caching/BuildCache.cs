@@ -28,9 +28,9 @@ namespace RulesMSBuild.Tools.Builder.Caching
         public readonly ResultsCache ResultsCache;
         private readonly Dictionary<TargetResult, string> _originalResults = new ();
 
-        public BuildCache(BazelContext.BazelLabel label, 
-            PathMapper pathMapper, 
-            Files files, 
+        public BuildCache(BazelContext.BazelLabel label,
+            PathMapper pathMapper,
+            Files files,
             TargetGraph? targetGraph)
         {
             ResultsCache = new BazelResultCache();
@@ -96,7 +96,7 @@ namespace RulesMSBuild.Tools.Builder.Caching
                     BuildRequest.InvalidNodeRequestId
                 ));
         }
-        
+
         public (Dictionary<string, LabelResult> caches, List<LabelResult> cachesInOrder) DeserializeCaches()
         {
             var caches = new Dictionary<string, LabelResult>();
@@ -125,7 +125,7 @@ namespace RulesMSBuild.Tools.Builder.Caching
                 {
                     ErrorUtilities.VerifyThrow(ConfigCache!.GetMatchingConfiguration(config) == null,
                         "Input caches should not contain entries for the same configuration");
-                    
+
                     labelResult.NewIds = new Dictionary<int, int>();
                     var newId = _newConfigurationId();
                     labelResult.NewIds[config.ConfigurationId] = newId;
@@ -167,7 +167,7 @@ namespace RulesMSBuild.Tools.Builder.Caching
                     {
                         // quick and dirty way to figure out which results we built in this build
                         _originalResults[targetResult.Value] = targetResult.Key;
-                        
+
                         if (cluster != null)
                         {
                             var node = cluster.GetOrAdd(targetResult.Key);
@@ -213,7 +213,7 @@ namespace RulesMSBuild.Tools.Builder.Caching
                 var list = new List<BuildResult>();
                 foreach (var result in allResults)
                 {
-                
+
                     var targetNames = new List<string>();
                     foreach (var (targetName, targetResult) in result.ResultsByTarget)
                     {

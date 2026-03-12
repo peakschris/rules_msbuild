@@ -1,0 +1,74 @@
+load("//tests/tools/build_test:build_test.bzl", "build_test")
+load("@rules_msbuild//dotnet:defs.bzl", "msbuild_binary")
+
+msbuild_binary(
+    name = "net100",
+    srcs = ["Program.cs"],
+    packable = True,
+    target_framework = "net10.0",
+    version = "1.2.3",
+    visibility = ["//visibility:public"],
+)
+
+build_test(
+    name = "net100_restore_test",
+    expected_files = {
+        "": [
+            "net100_restore.binlog",
+        ],
+        "restore": [
+            "project.assets.json",
+            "net100.csproj.bazel.props",
+            "net100.csproj.nuget.dgspec.json",
+            "net100.csproj.nuget.g.props",
+            "net100.csproj.nuget.g.targets",
+        ],
+    },
+)
+
+build_test(
+    name = "net100_test",
+    expected_files = {
+        "": [
+            "net100.cache",
+            # binlog & dot is only output with --define=BUILD_DIAG=1
+            "net100.binlog",
+            "net100.dot",
+        ],
+        "obj/net10.0": [
+            "net100.dll",
+        ],
+        "net10.0": [
+            # pdb is only output with compilation mode=dbg
+            "net100.pdb",
+            "net100.dll",
+            "net100.deps.json",
+            "net100.runtimeconfig.json",
+        ],
+    },
+    expected_output = "Hello Bazel!\n",
+)
+
+build_test(
+    name = "net100_publish_test",
+    expected_files = {
+        "publish/net10.0": [
+            "net100",
+            "net100.exe",
+            "net100.pdb",
+            "net100.dll",
+            "net100.deps.json",
+            "net100.runtimeconfig.json",
+        ],
+    },
+    expected_output = "Hello Bazel!\n",
+)
+
+build_test(
+    name = "net100.nupkg_test",
+    expected_files = {
+        "": [
+            "net100.1.2.3.nupkg",
+        ],
+    },
+)

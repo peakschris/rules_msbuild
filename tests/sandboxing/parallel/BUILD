@@ -21,7 +21,7 @@ msbuild_binary(
     name = "foo",
     srcs = ["foo.cs"],
     tags = TAGS,
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     visibility = ["//visibility:public"],
 )
 

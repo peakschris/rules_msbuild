@@ -161,7 +161,7 @@ msbuild_publish = rule(
 _RESTORE_COMMON_ATTRS = dicts.add(_COMMON_ATTRS, {
     "target_framework": attr.string(
         doc = """The [Target Framework Moniker (TFM)](https://docs.microsoft.com/en-us/dotnet/standard/frameworks#supported-target-frameworks)
-of the target framework to compile for, i.e. `net8.0`, `netstandard2.0` etc.
+of the target framework to compile for, i.e. `net10.0`, `netstandard2.0` etc.
 
 * **Must** match the evaluated `<TargetFramework>` property in the project file
 * **Must** be listed in the `target_frameworks` attribute of the `nuget_fetch` call for the workspace
