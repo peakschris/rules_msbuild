@@ -111,9 +111,18 @@ def _make_env(dotnet_sdk_root, os):
         "DOTNET_NOLOGO": "1",
         # "NUGET_SHOW_STACK": "true",
         # "BUILDER_DEBUG": "1",
-        "OS": "Windows_NT", # https://github.com/dotnet/aspnetcore/issues/27990
         "RULES_MSBUILD_VERSION": VERSION,
     }
+
+    # https://github.com/dotnet/aspnetcore/issues/27990
+    if os == "windows":
+        env["OS"] = "Windows_NT"
+    elif os == "linux":
+        env["OS"] = "Linux"
+    elif os == "darwin":
+        env["OS"] = "Darwin"
+    else:
+        fail("Unsupported OS: {}".format(os))
 
     if os not in NUGET_ENVIRONMENTS:
         fail("No nuget environment configuration for os {}".format(os))

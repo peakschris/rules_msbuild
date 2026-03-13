@@ -2,7 +2,7 @@
     <Import Condition="$(_BazelDirectoryProps) != ''" Project="$(_BazelDirectoryProps)"/>
     <PropertyGroup>
         <!-- @dotnet_sdk//:builder will set $(ExecRoot) and $(BINDIR)-->
-        <BazelPackage>$(MSBuildProjectDirectory.Substring($(ExecRoot.Length)).Replace('\','/'))</BazelPackage>
+        <BazelPackage>$(MSBuildProjectDirectory.Substring($(ExecRoot.Length)).Replace('\','/').TrimStart('/'))</BazelPackage>
 
         <!-- Override MSBuild output path properties -->
 

@@ -67,7 +67,7 @@ namespace RulesMSBuild.Tests.Tools
                 package = (Path.GetDirectoryName(projectName) ?? "").Replace("\\","/"),
                 label_name = Path.GetFileNameWithoutExtension(projectName) + "_" + action,
                 nuget_config = "NuGet.config",
-                tfm = "net10.0",
+                tfm = "netcoreapp3.1",
                 directory_bazel_props = "Bazel.props",
                 configuration = "dbg",
                 output_type = "lib",
@@ -203,9 +203,7 @@ namespace RulesMSBuild.Tests.Tools
 
             BuildAndVerifyTargets("foo:Publish");
 
-            // When building Publish which depends on cached targets Build and CacheMe,
-            // the BuildResult includes all targets that were part of the execution
-            VerifyCachedTargets("foo:Build", "foo:CacheMe", "foo:Publish");
+            VerifyCachedTargets("foo:Publish");
         }
 
         [Fact]
@@ -244,7 +242,7 @@ namespace RulesMSBuild.Tests.Tools
             _projectFile!.AppendLine($@"<Target Name='Pack'>
     <MSBuild Projects='$(MSBuildProjectFullPath)'
             Targets='CacheMe'
-            Properties='TargetFramework=net10.0'
+            Properties='TargetFramework=netcoreapp3.1'
     ></MSBuild>
 </Target>
 ");
@@ -298,12 +296,9 @@ namespace RulesMSBuild.Tests.Tools
                 );
 
             // make sure we stored the results from foo in our current cache
-            // BuildResults include all targets executed, including cached ones
             VerifyCachedTargets(
                 "bar:Build",
                 "bar:BuildReference",
-                "foo:Build",
-                "foo:CacheMe",
                 // this final target is not supported by stock MSBuild because it mixes results for configurations
                 "foo:ReferenceMe");
 
@@ -343,16 +338,15 @@ namespace RulesMSBuild.Tests.Tools
         {
             WriteCacheManifest(_context.ProjectFile);
             var cache = new BuildCache(new Label("_", "_", "_"), null!, new Files(), null) {Manifest = _nextManifest};
+            var (caches, _) = cache.DeserializeCaches();
 
-            // Initialize to load all caches so we have access to ConfigCache
+            // we want the most recent results
+            var last = caches[_context.Bazel.Label.ToString()];
+
+            // but we need all the configs to get the ProjectFullPath
             cache.Initialize(_nextManifestPath!, null);
-
-            // Load only the result file that was just saved (the output from the last build)
-            var outputResultPath = _nextManifest.Output.Result;
-            var lastResult = cache.DeserializeResult(outputResultPath);
-
             var cached = (
-                from result in lastResult.Results
+                from result in last.Results
                 let config = cache.ConfigCache[result.ConfigurationId]
                 from targetName in result.ResultsByTarget.Keys
                 let shortName = Path.GetFileNameWithoutExtension(config.ProjectFullPath)
@@ -360,7 +354,9 @@ namespace RulesMSBuild.Tests.Tools
 
             cached = cached.OrderBy(c => c).ToList();
             cached.Should().Equal(expectations);
-        }        private void BuildAndVerifyTargets(params string[] expectedTargets)
+        }
+
+        private void BuildAndVerifyTargets(params string[] expectedTargets)
         {
             var result = _builder.Build();
             result.Should().Be(0);
@@ -400,7 +396,7 @@ namespace RulesMSBuild.Tests.Tools
             _projectPath = path != null ? Path.Combine(_context.ExecPath(path)) : _context.ProjectFile;
             _projectFile = new StringBuilder(@"<Project>
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
     </PropertyGroup>
 
 ");

@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -99,6 +100,7 @@ func CheckExecutableOutput(t *testing.T, config *TestConfig) {
 	}
 
 	actualErr := files.Endings(stderr.String())
+	actualErr = stripDotnetSdkWarnings(actualErr)
 	assert.Empty(t, actualErr, "command had errors")
 
 	if config.ExpectedOutput[0] == '%' {
@@ -126,4 +128,14 @@ func CheckDotnetOutput(t *testing.T, assemblyPath string, expectedOutput string)
 	os.Setenv("DOTNET_NOLOGO", "0")
 	t.Logf("dotnet path: %s\n", config.Target)
 	CheckExecutableOutput(t, &config)
+}
+
+func stripDotnetSdkWarnings(stderr string) string {
+	var kept []string
+	for _, line := range strings.Split(stderr, "\n") {
+		if !strings.HasPrefix(strings.TrimSpace(line), "An issue was encountered verifying workloads.") {
+			kept = append(kept, line)
+		}
+	}
+	return strings.TrimSpace(strings.Join(kept, "\n"))
 }

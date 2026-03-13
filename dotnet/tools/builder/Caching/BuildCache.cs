@@ -114,13 +114,6 @@ namespace RulesMSBuild.Tools.Builder.Caching
             return (caches, cachesInOrder);
         }
 
-        public LabelResult DeserializeResult(string cacheFile)
-        {
-            LabelResult result = null!;
-            DoTranslate(cacheFile, CreateReadTranslator, (t) => TranslateResult(ref result, t));
-            return result;
-        }
-
         public void AggregateCaches(List<LabelResult> cachesInOrder,
             Dictionary<string, LabelResult> caches)
         {
@@ -129,12 +122,13 @@ namespace RulesMSBuild.Tools.Builder.Caching
                 var configs = labelResult.ConfigCache.ToList().ToArray();
                 var results = labelResult.Results;
 
+                labelResult.NewIds = new Dictionary<int, int>();
+
                 foreach (var config in configs)
                 {
                     ErrorUtilities.VerifyThrow(ConfigCache!.GetMatchingConfiguration(config) == null,
                         "Input caches should not contain entries for the same configuration");
 
-                    labelResult.NewIds = new Dictionary<int, int>();
                     var newId = _newConfigurationId();
                     labelResult.NewIds[config.ConfigurationId] = newId;
                     Result.OriginalIds[newId] = config.ConfigurationId;
@@ -152,81 +146,24 @@ namespace RulesMSBuild.Tools.Builder.Caching
                 foreach (var result in results)
                 {
                     int newConfigId;
+
                     if (labelResult.ConfigMap.TryGetValue(result.ConfigurationId, out var configSource))
                     {
-                        // Check if OriginalIds contains the configuration
-                        if (!labelResult.OriginalIds.TryGetValue(result.ConfigurationId, out var originalId))
-                        {
-                            Debug($"Original ID for configuration {result.ConfigurationId} not found - skipping this result");
-                            continue;
-                        }
-                        
+                        var originalId = labelResult.OriginalIds[result.ConfigurationId];
                         // assume that bazel properly ordered the cache list in postorder in the depset
-                        
-                        // Check if the configSource exists in caches (safety check for fresh project instances)
-                        if (caches.TryGetValue(configSource, out var sourceCache))
-                        {
-                            // Check if sourceCache.NewIds contains the originalId
-                            if (sourceCache.NewIds.TryGetValue(originalId, out newConfigId))
-                            {
-                                // Success - use the found mapping
-                            }
-                            else
-                            {
-                                Debug($"Original ID {originalId} not found in source cache NewIds - skipping this result");
-                                continue;
-                            }
-                        }
-                        else
-                        {
-                            Debug($"Cache miss for configSource '{configSource}' - using local mapping for configuration {result.ConfigurationId}");
-                            
-                            // Check if labelResult.NewIds contains the configuration
-                            if (labelResult.NewIds.TryGetValue(result.ConfigurationId, out newConfigId))
-                            {
-                                // Success - use the found mapping
-                            }
-                            else
-                            {
-                                Debug($"Configuration {result.ConfigurationId} not found in NewIds - skipping this result");
-                                continue; // Skip this result since we can't resolve its configuration
-                            }
-                        }
+                        newConfigId = caches[configSource].NewIds[originalId];
                     }
                     else
                     {
-                        // Check if localResult.NewIds contains the configuration
-                        if (labelResult.NewIds.TryGetValue(result.ConfigurationId, out newConfigId))
-                        {
-                            // Success - use the found mapping
-                        }
-                        else
-                        {
-                            Debug($"Configuration {result.ConfigurationId} not found in local NewIds - skipping this result");
-                            continue; // Skip this result since we can't resolve its configuration
-                        }
+                        newConfigId = labelResult.NewIds[result.ConfigurationId];
                     }
 
                     Cluster? cluster = null;
                     if (_targetGraph != null)
                     {
-                        try
-                        {
-                            var config = ConfigCache![newConfigId];
-                            if (config != null)
-                            {
-                                var path = _pathMapper.ToBazel(config.ProjectFullPath);
-                                cluster = _targetGraph!.GetOrAddCluster(path);
-                            }
-                        }
-                        catch (KeyNotFoundException)
-                        {
-                            Debug($"Configuration {newConfigId} not found in ConfigCache - skipping cluster assignment");
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug($"Error accessing ConfigCache for configuration {newConfigId}: {ex.Message}");
-                        }
+                        var config = ConfigCache![newConfigId];
+                        var path = _pathMapper.ToBazel(config.ProjectFullPath);
+                        cluster = _targetGraph!.GetOrAddCluster(path);
                     }
 
                     foreach (var targetResult in result.ResultsByTarget)
@@ -280,19 +217,16 @@ namespace RulesMSBuild.Tools.Builder.Caching
                 foreach (var result in allResults)
                 {
 
-                    var hasNewTargets = false;
-                    foreach (KeyValuePair<string, TargetResult> kvp in result.ResultsByTarget)
+                    var targetNames = new List<string>();
+                    foreach (var (targetName, targetResult) in result.ResultsByTarget)
                     {
-                        if (!_originalResults.ContainsKey(kvp.Value))
-                        {
-                            hasNewTargets = true;
-                            break;
-                        }
+                        if (_originalResults.ContainsKey(targetResult)) continue;
+                        targetNames.Add(targetName);
                     }
-                    if (hasNewTargets)
-                    {
+                    if (targetNames.Count == result.ResultsByTarget.Count)
                         list.Add(result);
-                    }
+                    else
+                        list.Add(new BuildResult(result, targetNames.ToArray()));
                 }
 
                 resultsToKeep = list;

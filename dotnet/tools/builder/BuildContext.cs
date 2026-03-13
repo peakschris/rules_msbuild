@@ -76,11 +76,7 @@ namespace RulesMSBuild.Tools.Builder
             // The downloaded SDK root is two levels above the versioned sdk directory (sdk/<version> -> sdk -> dotnet root).
             var dotnetRoot = Path.GetDirectoryName(Path.GetDirectoryName(SdkRoot))!;
             MSBuild.BuildEnvironment["DOTNET_ROOT"] = dotnetRoot;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
-                RuntimeInformation.ProcessArchitecture == Architecture.X64)
-            {
-                MSBuild.BuildEnvironment["DOTNET_ROOT_X64"] = dotnetRoot;
-            }
+            MSBuild.BuildEnvironment["DOTNET_ROOT_X64"] = dotnetRoot;
 
             ProjectFile = ExecPath(command.project_file);
             ProjectDirectory = Path.GetDirectoryName(ProjectFile)!;

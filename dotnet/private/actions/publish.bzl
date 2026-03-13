@@ -32,8 +32,8 @@ def publish(ctx):
     runfiles_manifest = manual_runfiles(ctx, info)
 
     inputs = depset(
-        [cache_manifest, ctx.file._launcher_template, runfiles_manifest],
-        transitive = [info.files, info.runfiles],
+        [cache_manifest, ctx.file._launcher_template, runfiles_manifest] + info.files.to_list(),
+        transitive = [info.runfiles],
     )
     outputs = [output_dir, cache.result, cache.project] + cmd_outputs
 

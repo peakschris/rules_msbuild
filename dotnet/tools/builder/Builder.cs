@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -159,12 +158,8 @@ namespace RulesMSBuild.Tools.Builder
             {
                 project = _deps.ProjectLoader.Load(pc);
             }
-            catch (Exception ex) when (
-                ex is ProjectCacheMissException ||
-                (ex is AggregateException ae && ae.InnerException is ProjectCacheMissException))
+            catch (ProjectCacheMissException missingException)
             {
-                var missingException = (ex as ProjectCacheMissException)
-                    ?? (ProjectCacheMissException)((AggregateException)ex).InnerException!;
                 Fail($"invalid ProjectReference",
                     $"ProjectReference: \"{_deps.PathMapper.ToBazel(missingException.ProjectPath)}\" is not " +
                     $"listed in the deps attribute of {_context.Bazel.Label}. Did you remember to " +
@@ -205,32 +200,6 @@ namespace RulesMSBuild.Tools.Builder
 
         private BuildResultCode ExecuteBuild(ProjectInstance project)
         {
-            // Debug self-contained deployment properties that can cause output path issues
-            var selfContained = project.GetPropertyValue("SelfContained");
-            var useAppHost = project.GetPropertyValue("UseAppHost");
-            var runtimeIdentifier = project.GetPropertyValue("RuntimeIdentifier");
-            var publishSingleFile = project.GetPropertyValue("PublishSingleFile");
-
-            Debug($"Project SelfContained: {selfContained}");
-            Debug($"Project UseAppHost: {useAppHost}");
-            Debug($"Project RuntimeIdentifier: {runtimeIdentifier}");
-            Debug($"Project PublishSingleFile: {publishSingleFile}");
-            Debug($"Assembly name: {_context.Command.assembly_name}");
-            Debug($"Output path: {_context.MSBuild.OutputPath}");
-
-            // Warn if potentially problematic settings are detected
-            if (selfContained?.ToLower() == "true" || useAppHost?.ToLower() == "true" || !string.IsNullOrEmpty(runtimeIdentifier))
-            {
-                Debug($"WARNING: Self-contained deployment settings detected - this may cause 'output was not created' errors");
-                Debug($"WARNING: Expected output location: {_context.MSBuild.OutputPath}");
-            }
-
-            // Bazel marks output files as read-only after a successful build. On a subsequent build,
-            // MSBuild will fail trying to overwrite them (MSB3021 "Access denied"). Strip read-only
-            // from output and obj directories before MSBuild runs.
-            MakeDirectoryWritable(_context.MSBuild.OutputPath);
-            MakeDirectoryWritable(_context.MSBuild.IntermediateOutputPath);
-
             var source = new TaskCompletionSource<BuildResultCode>();
             var flags = BuildRequestDataFlags.ReplaceExistingProjectInstance;
 
@@ -454,17 +423,13 @@ namespace RulesMSBuild.Tools.Builder
                         var loggerPath = Path.Combine(
                             Path.GetDirectoryName(_context.NuGetConfig)!,
                             "packages/junitxml.testlogger/3.0.87/build/_common");
-                        var testTfmPath = Path.Combine(_context.MSBuild.OutputPath, _context.Tfm);
+                        var tfmPath = Path.Combine(_context.MSBuild.OutputPath, _context.Tfm);
                         foreach (var dll in Directory.EnumerateFiles(loggerPath))
                         {
                             var filename = Path.GetFileName(dll);
-                            File.Copy(dll, Path.Combine(testTfmPath, filename), overwrite: true);
+                            File.Copy(dll, Path.Combine(tfmPath, filename));
                         }
                     }
-
-                    // Handle self-contained deployments that output to runtime-specific subdirectories
-                    var tfmPath = Path.Combine(_context.MSBuild.OutputPath, _context.Tfm);
-                    HandleSelfContainedOutputs(tfmPath);
 
                     if (_context.IsExecutable)
                     {
@@ -500,104 +465,6 @@ namespace RulesMSBuild.Tools.Builder
                 // so we retrieve them from our own directory and ignore other variables
                 useDirectory ? "selfish" : "auto"
             });
-        }
-
-        /// <summary>
-        /// Handle self-contained deployments that output assemblies to runtime-specific subdirectories.
-        /// When SelfContained=true, MSBuild creates outputs in win-x64/, linux-x64/, etc. but Bazel
-        /// expects them directly in the TFM directory (net10.0/). This method checks for runtime
-        /// subdirectories and copies the outputs to the expected location.
-        /// </summary>
-        private void HandleSelfContainedOutputs(string tfmPath)
-        {
-            Debug($"HandleSelfContainedOutputs: checking tfmPath={tfmPath}");
-
-            if (!Directory.Exists(tfmPath))
-            {
-                Debug($"HandleSelfContainedOutputs: tfmPath does not exist");
-                return;
-            }
-
-            var assemblyName = _context.Command.assembly_name;
-            var expectedDll = Path.Combine(tfmPath, assemblyName + ".dll");
-            var expectedExe = Path.Combine(tfmPath, assemblyName + ".exe");
-
-            Debug($"HandleSelfContainedOutputs: assemblyName={assemblyName}");
-            Debug($"HandleSelfContainedOutputs: expectedDll={expectedDll}");
-            Debug($"HandleSelfContainedOutputs: expectedExe={expectedExe}");
-
-            // Check if the required .dll output already exists (framework-dependent deployment).
-            // Do NOT bail out on .exe alone — a stale .exe from a prior build must not prevent
-            // the .dll from being copied when MSBuild places it in a runtime subdirectory (win-x64 etc.).
-            if (File.Exists(expectedDll))
-            {
-                Debug($"HandleSelfContainedOutputs: expectedDll already exists, skipping");
-                return;
-            }
-
-            // Look for runtime-specific subdirectories (win-x64, linux-x64, etc.)
-            var allDirs = Directory.GetDirectories(tfmPath);
-            Debug($"HandleSelfContainedOutputs: found {allDirs.Length} subdirectories: {string.Join(", ", allDirs.Select(Path.GetFileName))}");
-
-            var runtimeDirs = allDirs
-                .Where(dir =>
-                {
-                    var dirName = Path.GetFileName(dir);
-                    return dirName.Contains("-") && // Runtime identifiers contain dashes
-                           (dirName.StartsWith("win-") || dirName.StartsWith("linux-") ||
-                            dirName.StartsWith("osx-") || dirName.Contains("x64") ||
-                            dirName.Contains("arm"));
-                });
-
-            var runtimeDirsList = runtimeDirs.ToList();
-            Debug($"HandleSelfContainedOutputs: found {runtimeDirsList.Count} runtime directories: {string.Join(", ", runtimeDirsList.Select(Path.GetFileName))}");
-
-            foreach (var runtimeDir in runtimeDirsList)
-            {
-                var runtimeDll = Path.Combine(runtimeDir, assemblyName + ".dll");
-                var runtimeExe = Path.Combine(runtimeDir, assemblyName + ".exe");
-
-                Debug($"HandleSelfContainedOutputs: checking runtimeDir={runtimeDir}");
-                Debug($"HandleSelfContainedOutputs: runtimeDll exists={File.Exists(runtimeDll)}");
-                Debug($"HandleSelfContainedOutputs: runtimeExe exists={File.Exists(runtimeExe)}");
-
-                // Copy main assembly
-                if (File.Exists(runtimeDll) && !File.Exists(expectedDll))
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(expectedDll)!);
-                    File.Copy(runtimeDll, expectedDll, overwrite: true);
-                    Debug($"Copied self-contained DLL from {runtimeDll} to {expectedDll}");
-                }
-
-                // Copy executable (if exists)
-                if (File.Exists(runtimeExe) && !File.Exists(expectedExe))
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(expectedExe)!);
-                    File.Copy(runtimeExe, expectedExe, overwrite: true);
-                    Debug($"Copied self-contained EXE from {runtimeExe} to {expectedExe}");
-                }
-
-                // Copy other essential files (deps.json, runtimeconfig.json, etc.)
-                var runtimeFiles = Directory.GetFiles(runtimeDir, $"{assemblyName}.*")
-                    .Where(f =>
-                    {
-                        var ext = Path.GetExtension(f).ToLower();
-                        return ext == ".deps.json" || ext == ".runtimeconfig.json" || ext == ".pdb";
-                    });
-
-                foreach (var runtimeFile in runtimeFiles)
-                {
-                    var fileName = Path.GetFileName(runtimeFile);
-                    var targetFile = Path.Combine(tfmPath, fileName);
-                    if (!File.Exists(targetFile))
-                    {
-                        File.Copy(runtimeFile, targetFile, overwrite: true);
-                        Debug($"Copied self-contained file from {runtimeFile} to {targetFile}");
-                    }
-                }
-
-                break; // Only process the first runtime directory found
-            }
         }
 
         /// <summary>
@@ -662,28 +529,6 @@ namespace RulesMSBuild.Tools.Builder
                     }
 
                     src.CopyTo(dest.FullName, true);
-                }
-            }
-        }
-
-        private static void MakeDirectoryWritable(string path)
-        {
-            if (!Directory.Exists(path)) return;
-            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
-            {
-                try
-                {
-                    var attrs = File.GetAttributes(file);
-                    if ((attrs & FileAttributes.ReadOnly) != 0)
-                        File.SetAttributes(file, attrs & ~FileAttributes.ReadOnly);
-                }
-                catch (IOException)
-                {
-                    // The file may be on a read-only bind-mount (Linux sandbox): nothing to do.
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    // Best-effort: skip files we cannot modify.
                 }
             }
         }
