@@ -39,7 +39,7 @@ namespace RulesMSBuild.Tests.Tools
         public E2eTests(ITestOutputHelper helper)
         {
             _helper = helper;
-            
+
             _tmp = BazelEnvironment.GetTmpDir(nameof(E2eTests));
             string execRoot = Path.Combine(_tmp, "execroot");
             Directory.CreateDirectory(execRoot);
@@ -67,7 +67,7 @@ namespace RulesMSBuild.Tests.Tools
                 package = (Path.GetDirectoryName(projectName) ?? "").Replace("\\","/"),
                 label_name = Path.GetFileNameWithoutExtension(projectName) + "_" + action,
                 nuget_config = "NuGet.config",
-                tfm = "net8.0",
+                tfm = "netcoreapp3.1",
                 directory_bazel_props = "Bazel.props",
                 configuration = "dbg",
                 output_type = "lib",
@@ -75,13 +75,13 @@ namespace RulesMSBuild.Tests.Tools
                 project_file = projectName,
                 DirectorySrcs = Array.Empty<string>()
             }) {DiagnosticsEnabled = true};
-            
+
             _context.MakeTargetGraph(true);
             _deps = new BuilderDependencies(_context, buildLog: new Mock<IBazelMsBuildLogger>().Object);
-            
+
             _targetLog = new List<string>();
             _logInited = false;
-            
+
             var testLogger = new Mock<ILogger>();
             testLogger.Setup(l => l.Initialize(It.IsAny<IEventSource>())).Callback<IEventSource>(InitTestLog);
             _deps.Loggers.Add(testLogger.Object);
@@ -93,7 +93,7 @@ namespace RulesMSBuild.Tests.Tools
         private void InitTestLog(IEventSource eventSource)
         {
             if (_logInited) return;
-            
+
             _logInited = true;
 
             var projectStack = new Stack<string>();
@@ -122,11 +122,11 @@ namespace RulesMSBuild.Tests.Tools
             PrepareNewBuild("foo.csproj");
             StartProject();
             AddTarget("Build");
-            SaveProject();                
-            
+            SaveProject();
+
             BuildAndVerifyTargets("foo:Build");
         }
-        
+
         [Fact]
         public void BuildFromCache_SkipsSecondTime()
         {
@@ -135,48 +135,48 @@ namespace RulesMSBuild.Tests.Tools
             AddTarget("CacheMe");
             AddTarget("Build", "CacheMe");
             SaveProject();
-            
+
             BuildAndVerifyTargets(
                 "foo:CacheMe",
                 "foo:Build"
                 );
-            
+
             PrepareNewBuild("foo.csproj");
 
             VerifyBuiltTargets(/*none*/);
         }
-   
+
         [Fact]
         public void Build_ReusesIntermediateResults()
         {
-            
+
             PrepareNewBuild("foo.csproj", "build");
             StartProject();
-            
+
             // first build
             AddTarget("CacheMe");
             AddTarget("Build", "CacheMe");
-            
+
             // second build: original ResultsCacheWithOverride won't record "_PublishImpl"
-            // as we're not building it directly 
+            // as we're not building it directly
             AddTarget("_PublishImpl", "Build", "CacheMe");
             AddTarget("Publish", "_PublishImpl");
-            
+
             // third build
             AddTarget("Pack", "_PublishImpl");
-            
+
             SaveProject();
             // normal, no caching
             BuildAndVerifyTargets("foo:CacheMe", "foo:Build");
 
             PrepareNewBuild("foo.csproj", "publish");
             // nothing special, normal caching produces this
-            BuildAndVerifyTargets("foo:_PublishImpl", "foo:Publish"); 
-            
+            BuildAndVerifyTargets("foo:_PublishImpl", "foo:Publish");
+
             PrepareNewBuild("foo.csproj", "pack");
-            
+
             // our custom code kicks in here:
-            // since this target depends on _PublishImpl, but we only explicitly built Publish, the default cache 
+            // since this target depends on _PublishImpl, but we only explicitly built Publish, the default cache
             // won't include _PublishImpl in the results cache. Our custom code does.
             BuildAndVerifyTargets("foo:Pack");
         }
@@ -186,23 +186,23 @@ namespace RulesMSBuild.Tests.Tools
         {
             PrepareNewBuild("foo.csproj", "build");
             StartProject();
-            
+
             // first build
             AddTarget("CacheMe");
             AddTarget("Build", "CacheMe");
-            
+
             // second build
             AddTarget("Publish", "Build");
-            
+
             SaveProject();
-            
+
             // normal, no caching
             BuildAndVerifyTargets("foo:CacheMe", "foo:Build");
 
             PrepareNewBuild("foo.csproj", "publish");
-            
+
             BuildAndVerifyTargets("foo:Publish");
-            
+
             VerifyCachedTargets("foo:Publish");
         }
 
@@ -216,23 +216,23 @@ namespace RulesMSBuild.Tests.Tools
             SaveProject();
 
             BuildAndVerifyTargets("foo:CacheMe", "foo:Build");
-            
+
             var fooPath = _context.ProjectFile;
-            
+
             PrepareNewBuild("bar.csproj");
-            
+
             StartProject();
             AddBuildReferenceTarget("BuildReference", fooPath, "CacheMe");
             AddTarget("Build", "BuildReference");
             SaveProject();
-            
+
             BuildAndVerifyTargets(
                 /*foo:CacheMe is not built */
                 "bar:BuildReference",
                 "bar:Build"
                 );
         }
-        
+
         [Fact]
         public void TargetFrameworkAsGlobalProperty_IsCached()
         {
@@ -240,29 +240,29 @@ namespace RulesMSBuild.Tests.Tools
             PrepareNewBuild("foo.csproj", "build");
             StartProject();
             _projectFile!.AppendLine($@"<Target Name='Pack'>
-    <MSBuild Projects='$(MSBuildProjectFullPath)' 
+    <MSBuild Projects='$(MSBuildProjectFullPath)'
             Targets='CacheMe'
-            Properties='TargetFramework=net8.0'
+            Properties='TargetFramework=netcoreapp3.1'
     ></MSBuild>
 </Target>
 ");
             AddTarget("CacheMe");
             AddTarget("Build", "CacheMe");
             SaveProject();
-            
+
             BuildAndVerifyTargets(
                 "foo:CacheMe",
                 "foo:Build"
             );
-            
+
             PrepareNewBuild("foo.csproj", "pack");
-            
+
             BuildAndVerifyTargets(
                 "foo:Pack"
                  /* CacheMe should not be built */
                 );
         }
-        
+
         [Fact]
         public void CachedReference_NewTarget_Works()
         {
@@ -270,37 +270,37 @@ namespace RulesMSBuild.Tests.Tools
             // GetTargetFrameworks is not built by the primary build process, but is instead built by references.
             PrepareNewBuild("foo.csproj");
             StartProject();
-            AddTarget("CacheMe"); 
+            AddTarget("CacheMe");
             AddTarget("Build", "CacheMe");
             // This target is not built by Build, but only built by referencing projects
             AddTarget("ReferenceMe");
             SaveProject();
-            
+
             BuildAndVerifyTargets("foo:CacheMe", "foo:Build");
-            
+
             var fooPath = _context.ProjectFile;
             PrepareNewBuild("bar.csproj");
-            
+
             StartProject();
             // this will add a result for the foo.csproj configuration to the current results cache
-            // The stock version of MSBuild throws a "caches should not overlap" internal exception when we build this 
-            // way (when its compiled in debug mode) 
+            // The stock version of MSBuild throws a "caches should not overlap" internal exception when we build this
+            // way (when its compiled in debug mode)
             AddBuildReferenceTarget("BuildReference", fooPath, "ReferenceMe");
             AddTarget("Build", "BuildReference");
             SaveProject();
-            
+
             BuildAndVerifyTargets(
                 "bar:BuildReference",
                 "foo:ReferenceMe",
                 "bar:Build"
                 );
-            
+
             // make sure we stored the results from foo in our current cache
             VerifyCachedTargets(
                 "bar:Build",
                 "bar:BuildReference",
                 // this final target is not supported by stock MSBuild because it mixes results for configurations
-                "foo:ReferenceMe"); 
+                "foo:ReferenceMe");
 
         }
 
@@ -312,7 +312,7 @@ namespace RulesMSBuild.Tests.Tools
             AddTarget("Build");
             SaveProject();
             BuildAndVerifyTargets("foo:Build");
-            
+
             PrepareNewBuild("foo/bar/bar.csproj");
             StartProject();
             AddTarget("Build");
@@ -320,36 +320,36 @@ namespace RulesMSBuild.Tests.Tools
             AddReference("../foo.csproj");
             SaveProject();
             BuildAndVerifyTargets("bar:Build");
-            
+
             PrepareNewBuild("foo/bar/bam/bam.csproj");
             StartProject();
             AddTarget("Build");
             // will be a valid relative path from bam.csproj
             AddReference("../bar.csproj");
             SaveProject();
-            
+
             // should not throw while loading foo/foo.csproj
             // should *not* try to load foo/bar/foo.csproj
             BuildAndVerifyTargets("bam:Build");
         }
 
-        
+
         private void VerifyCachedTargets(params string[] expectations)
         {
             WriteCacheManifest(_context.ProjectFile);
             var cache = new BuildCache(new Label("_", "_", "_"), null!, new Files(), null) {Manifest = _nextManifest};
             var (caches, _) = cache.DeserializeCaches();
-            
+
             // we want the most recent results
             var last = caches[_context.Bazel.Label.ToString()];
-            
+
             // but we need all the configs to get the ProjectFullPath
             cache.Initialize(_nextManifestPath!, null);
             var cached = (
-                from result in last.Results 
-                let config = cache.ConfigCache[result.ConfigurationId] 
-                from targetName in result.ResultsByTarget.Keys 
-                let shortName = Path.GetFileNameWithoutExtension(config.ProjectFullPath) 
+                from result in last.Results
+                let config = cache.ConfigCache[result.ConfigurationId]
+                from targetName in result.ResultsByTarget.Keys
+                let shortName = Path.GetFileNameWithoutExtension(config.ProjectFullPath)
                 select $"{shortName}:{targetName}").ToList();
 
             cached = cached.OrderBy(c => c).ToList();
@@ -363,7 +363,7 @@ namespace RulesMSBuild.Tests.Tools
             VerifyBuiltTargets(expectedTargets);
         }
 
-        
+
         private void AddBuildReferenceTarget(string targetName, string projectPath, string referencedTargets)
         {
             _projectFile!.AppendLine($@"<Target Name='{targetName}'>
@@ -396,7 +396,7 @@ namespace RulesMSBuild.Tests.Tools
             _projectPath = path != null ? Path.Combine(_context.ExecPath(path)) : _context.ProjectFile;
             _projectFile = new StringBuilder(@"<Project>
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
     </PropertyGroup>
 
 ");
@@ -405,7 +405,7 @@ namespace RulesMSBuild.Tests.Tools
         private void AddTarget(string targetName, params string[] dependsOnTargets)
         {
             var dependsOn = dependsOnTargets.Any() ? $" DependsOnTargets='{string.Join(";", dependsOnTargets)}'" : "";
-            
+
             _projectFile!.AppendLine($@"    <Target Name='{targetName}'{dependsOn}>
         <Message Text='{targetName}.Built' Importance='High' />
     </Target>
@@ -428,7 +428,7 @@ namespace RulesMSBuild.Tests.Tools
                 {
                 }
             };
-            
+
             if (lastManifest != null)
             {
                 foreach (var project in lastManifest.Projects)
@@ -457,7 +457,7 @@ namespace RulesMSBuild.Tests.Tools
             {
                 Directory.Delete(_tmp, true);
             }
-            catch 
+            catch
             {
                 //ignored
             }

@@ -48,12 +48,25 @@ func (l *LaunchInfo) GetRunfile(p string) string {
 // this means that the output directory is listed in the runfiles manifest, and since the output directory is a prefix
 // of all the items in the output directory, the actual output items are not listed explicitly in the manifest
 func (l *LaunchInfo) GetBuiltPath(key string) string {
-	outputDir := l.GetItem("output_dir")
-	value := l.GetItem(key)
-	diag(func() { fmt.Printf("findng built path: %s using prefix %s\n", value, outputDir) })
-	value = value[len(outputDir)+1:]
-	outputDirPath := l.GetRunfile(outputDir)
-	return path.Join(outputDirPath, value)
+    outputDir := l.GetItem("output_dir")
+    value := l.GetItem(key)
+
+	diag(func() { fmt.Printf("finding built path: %s using prefix %s\n", value, outputDir) })
+
+    trimmed := value
+    if strings.HasPrefix(value, outputDir) {
+        trimmed = value[len(outputDir):]
+        // If trimmed starts with a separator, remove it
+        if len(trimmed) > 0 && (trimmed[0] == '/' || trimmed[0] == '\\') {
+            trimmed = trimmed[1:]
+        }
+    } else {
+        fmt.Fprintf(os.Stderr, "[WARN] value %q does not start with output_dir %q\n", value, outputDir)
+        // Optionally leave trimmed as value, or take other action
+    }
+
+    outputDirPath := l.GetRunfile(outputDir)
+    return path.Join(outputDirPath, trimmed)
 }
 
 func GetLaunchInfo(binaryPath string) (*LaunchInfo, error) {

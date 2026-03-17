@@ -7,12 +7,13 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
-  <Import Project="$(ExecRoot)/external/+dotnet+dotnet_sdk/Directory.Bazel.props" Condition="$(_IsBootstrapping) == 'true'" />
+  <Import Project="$(ExecRoot)/$(DOTNET_CLI_HOME)/Directory.Bazel.props" Condition="$(_IsBootstrapping) == 'true' And Exists('$(ExecRoot)/$(DOTNET_CLI_HOME)/Directory.Bazel.props')" />
+
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
 
   <PropertyGroup>
-    <PublishDir Condition="$(_IsBootstrapping) == 'true'">$(BINDIR)/external/+dotnet+dotnet_sdk/publish</PublishDir>
-    <TargetFramework>net8.0</TargetFramework>
+        <PublishDir Condition="$(_IsBootstrapping) == 'true' And Exists('$(ExecRoot)/$(DOTNET_CLI_HOME)')">$(BINDIR)/$(DOTNET_CLI_HOME)/publish</PublishDir>
+    <TargetFramework>net10.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <LangVersion>9.0</LangVersion>
     <NoWarn>$(NoWarn);NU1603</NoWarn>
@@ -20,17 +21,11 @@
     <RootNamespace>RulesMSBuild.Tools.Builder</RootNamespace>
     <NoWarn>$(NoWarn);CS8618</NoWarn>
   </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.Build.Locator" Version="1.10.2" />
-    <PackageReference Include="Microsoft.NET.StringTools" Version="17.11.48" />
-    <PackageReference Include="SamHowes.Microsoft.Build" Version="17.11.48" ExcludeAssets="Runtime" GeneratePathProperty="true" />
-     <!-- Make sure msbuild only copies this exact dll and no dependencies. 
-    <None Include="$(PkgSamHowes_Microsoft_Build)/lib/**/*.dll">
-      <Link>%(Filename)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Visible>false</Visible>
-    </None> -->
-    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.11.48" ExcludeAssets="Runtime" />
+    <PackageReference Include="SamHowes.Microsoft.Build" Version="18.0.13" />
+    <PackageReference Include="SamHowes.Microsoft.Build.Framework" Version="18.0.13" />
     <PackageReference Include="CommandLineParser" Version="2.9.0-preview1" />
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />

@@ -1,6 +1,6 @@
 # Rules
 
-These are the primary rules defined by rules_msbuild. The mose convenient way to use these rules is to have 
+These are the primary rules defined by rules_msbuild. The mose convenient way to use these rules is to have
 [@rules_msbuild//gazelle/dotnet](//gazelle/dotnet:Readme.md) generate and manage them for you. These rules are exported
  as macros that define three targets that mirror the dotnet restore, build and publish cycle:
 
@@ -12,20 +12,20 @@ These are the primary rules defined by rules_msbuild. The mose convenient way to
 1. `<name>_publish` to execute the `dotnet publish --no-build` equivalent
     1. When deps are provided, depends on `<depname>_publish`
 
-For example, given `Foo.csproj`, a Console App, that references `Bar.csproj`, a 
+For example, given `Foo.csproj`, a Console App, that references `Bar.csproj`, a
 Class Library:
 ```python
 # //Foo:BUILD.bazel
 msbuild_binary(
     name = "Foo",
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     deps = ["//Bar"],
 )
 
 # //Bar:BUILD.bazel
 msbuild_library(
     name = "Bar",
-    target_framework = "net8.0",
+    target_framework = "net10.0",
 )
 ```
 
@@ -33,7 +33,7 @@ The following graph will be generated:
 
 ![Project graph](//docs:FooBar.graphviz.svg)
 
-Specifying `packable = True` will also generate a `<name>.nupkg` target that depends 
+Specifying `packable = True` will also generate a `<name>.nupkg` target that depends
 on the `<name>_publish` target.
 
 

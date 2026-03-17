@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.Build.BackEnd;
 using RulesMSBuild.Tools.Builder.Diagnostics;
 using RulesMSBuild.Tools.Builder.MSBuild;
@@ -49,9 +50,9 @@ namespace RulesMSBuild.Tools.Builder
         // MSBuild, however, MSBuild appears to not like the sandbox for the locations of the SDK files as it produces
         //  Microsoft.Common.CurrentVersion.targets(2182,5): error MSB3095: Invalid argument. "DefiningProjectDirectory"
         //  is a reserved item metadata, and cannot be modified or deleted.
-        // when run with ExecRoot. After much debugging, this appears to happen somewhere in ResolveAssemblyReferences 
-        // because MSBuild thinks it is necessary to copy metdata from one TaskItem for a referenced project to another 
-        // TaskItem for that referenced project because it is missing metadata before being resolved. 
+        // when run with ExecRoot. After much debugging, this appears to happen somewhere in ResolveAssemblyReferences
+        // because MSBuild thinks it is necessary to copy metdata from one TaskItem for a referenced project to another
+        // TaskItem for that referenced project because it is missing metadata before being resolved.
         private string ToolPath(string subpath) => Path.Combine(Bazel.OutputBase, subpath);
 
         public BuildContext(BuildCommand command)
@@ -70,6 +71,12 @@ namespace RulesMSBuild.Tools.Builder
             IsExecutable = command.output_type == "exe";
 
             SdkRoot = ToolPath(command.sdk_root);
+
+            // csc.exe (Roslyn compiler) is a .NET app host that probes for the runtime via DOTNET_ROOT.
+            // The downloaded SDK root is two levels above the versioned sdk directory (sdk/<version> -> sdk -> dotnet root).
+            var dotnetRoot = Path.GetDirectoryName(Path.GetDirectoryName(SdkRoot))!;
+            MSBuild.BuildEnvironment["DOTNET_ROOT"] = dotnetRoot;
+            MSBuild.BuildEnvironment["DOTNET_ROOT_X64"] = dotnetRoot;
 
             ProjectFile = ExecPath(command.project_file);
             ProjectDirectory = Path.GetDirectoryName(ProjectFile)!;

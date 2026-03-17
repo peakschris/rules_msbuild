@@ -71,7 +71,7 @@ func (d *dotnetLang) customUpdateRepos(args language.GenerateArgs) {
 	}
 
 	res, loads := importReposImpl(dc.packages, dc.frameworks, f, args)
-	match, err := merger.Match(f.Rules, res.Gen[0], kinds["nuget_fetch"])
+	match, err := merger.Match(f.Rules, res.Gen[0], kinds["nuget_fetch"], nil)
 	if match != nil {
 		// apparently the default code doesn't like merging our dictionary of lists
 		// we'll do this manually
@@ -79,7 +79,7 @@ func (d *dotnetLang) customUpdateRepos(args language.GenerateArgs) {
 	}
 
 	// merge just in case we missed something we didn't know about before
-	merger.MergeFile(f, res.Empty, res.Gen, merger.PreResolve, kinds)
+	merger.MergeFile(f, res.Empty, res.Gen, merger.PreResolve, kinds, nil)
 	fixLoads(f, loads)
 
 	f.Sync()

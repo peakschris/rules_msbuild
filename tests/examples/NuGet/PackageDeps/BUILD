@@ -5,7 +5,7 @@ msbuild_binary(
     name = "PackageDeps",
     srcs = ["HelloTransitiveNuget.cs"],
     project_file = "PackageDeps.csproj",
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     visibility = ["//visibility:public"],
     deps = [
         "@nuget//xunit",
@@ -15,7 +15,7 @@ msbuild_binary(
 build_test(
     name = "PackageDeps_test",
     expected_files = {
-        "net8.0": [
+        "net10.0": [
             "PackageDeps.dll",
             # @nuget//xunit references other packages that contain these dlls
             "xunit.assert.dll",

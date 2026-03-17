@@ -1,6 +1,6 @@
 # Rules
 
-These are the primary rules defined by rules_msbuild. The mose convenient way to use these rules is to have 
+These are the primary rules defined by rules_msbuild. The mose convenient way to use these rules is to have
 [@rules_msbuild//gazelle/dotnet](../gazelle/dotnet/Readme.md) generate and manage them for you. These rules are exported
  as macros that define three targets that mirror the dotnet restore, build and publish cycle:
 
@@ -12,20 +12,20 @@ These are the primary rules defined by rules_msbuild. The mose convenient way to
 1. `<name>_publish` to execute the `dotnet publish --no-build` equivalent
     1. When deps are provided, depends on `<depname>_publish`
 
-For example, given `Foo.csproj`, a Console App, that references `Bar.csproj`, a 
+For example, given `Foo.csproj`, a Console App, that references `Bar.csproj`, a
 Class Library:
 ```python
 # //Foo:BUILD.bazel
 msbuild_binary(
     name = "Foo",
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     deps = ["//Bar"],
 )
 
 # //Bar:BUILD.bazel
 msbuild_library(
     name = "Bar",
-    target_framework = "net8.0",
+    target_framework = "net10.0",
 )
 ```
 
@@ -33,7 +33,7 @@ The following graph will be generated:
 
 ![Project graph](FooBar.graphviz.svg)
 
-Specifying `packable = True` will also generate a `<name>.nupkg` target that depends 
+Specifying `packable = True` will also generate a `<name>.nupkg` target that depends
 on the `<name>_publish` target.
 
 
@@ -105,7 +105,7 @@ Defaults to `[]`
 
 i.e. given:
 ```
-msbuild_binary(name = "Foo", lang = "fs", target_framework = "net8.0")
+msbuild_binary(name = "Foo", lang = "fs", target_framework = "net10.0")
 ```
 
 rules_msbuild will attempt to compile `Foo.fsproj` by globbing for `**/*.fs` files.
@@ -162,7 +162,7 @@ Defaults to `[]`
 If `project_file` is not specified, the extension of these files will be used to infer the project name.
 i.e. given:
 ```
-msbuild_binary(name = "Foo", srcs = ["Program.cs"], target_framework = "net8.0")
+msbuild_binary(name = "Foo", srcs = ["Program.cs"], target_framework = "net10.0")
 ```
 
 rules_msbuild will attempt to compile `Foo.csproj`.
@@ -172,11 +172,11 @@ Defaults to `[]`
 <h4 id="msbuild_binary-target_framework">target_framework</h4>
 
 (*String, mandatory*): The [Target Framework Moniker (TFM)](https://docs.microsoft.com/en-us/dotnet/standard/frameworks#supported-target-frameworks)
-of the target framework to compile for, i.e. `net8.0`, `netstandard2.0` etc.
+of the target framework to compile for, i.e. `net10.0`, `netstandard2.0` etc.
 
 * **Must** match the evaluated `<TargetFramework>` property in the project file
 * **Must** be listed in the `target_frameworks` attribute of the `nuget_fetch` call for the workspace
-* **Must not** be a target framework alias i.e. `net8.0-windows` see [issue #153](https://github.com/samhowes/rules_msbuild/issues/153)
+* **Must not** be a target framework alias i.e. `net10.0-windows` see [issue #153](https://github.com/samhowes/rules_msbuild/issues/153)
 
 If this target has NuGet dependencies, this TFM **must** be listed for restore in the `nuget_fetch`
 call for the workspace.
@@ -184,7 +184,7 @@ call for the workspace.
 msbuild_library(
     name = "Foo",
     srcs = ["Bar.cs"],
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     deps = ["@nuget//NewtonSoft.Json"],
 )
 ```
@@ -193,9 +193,9 @@ Requires that the following must be specified:
 nuget_fetch(
     name = "nuget",
     packages = {
-        "NewtonSoft.Json/13.0.1": ["net8.0"],
+        "NewtonSoft.Json/13.0.1": ["net10.0"],
     },
-    target_frameworks = ["net8.0"],
+    target_frameworks = ["net10.0"],
 )
 ```
 > Note: `@rules_msbuild//gazelle/dotnet` will maintain the `target_framework` and `nuget_fetch` rule for you: After
@@ -269,7 +269,7 @@ Defaults to `[]`
 
 i.e. given:
 ```
-msbuild_binary(name = "Foo", lang = "fs", target_framework = "net8.0")
+msbuild_binary(name = "Foo", lang = "fs", target_framework = "net10.0")
 ```
 
 rules_msbuild will attempt to compile `Foo.fsproj` by globbing for `**/*.fs` files.
@@ -326,7 +326,7 @@ Defaults to `[]`
 If `project_file` is not specified, the extension of these files will be used to infer the project name.
 i.e. given:
 ```
-msbuild_binary(name = "Foo", srcs = ["Program.cs"], target_framework = "net8.0")
+msbuild_binary(name = "Foo", srcs = ["Program.cs"], target_framework = "net10.0")
 ```
 
 rules_msbuild will attempt to compile `Foo.csproj`.
@@ -336,11 +336,11 @@ Defaults to `[]`
 <h4 id="msbuild_library-target_framework">target_framework</h4>
 
 (*String, mandatory*): The [Target Framework Moniker (TFM)](https://docs.microsoft.com/en-us/dotnet/standard/frameworks#supported-target-frameworks)
-of the target framework to compile for, i.e. `net8.0`, `netstandard2.0` etc.
+of the target framework to compile for, i.e. `net10.0`, `netstandard2.0` etc.
 
 * **Must** match the evaluated `<TargetFramework>` property in the project file
 * **Must** be listed in the `target_frameworks` attribute of the `nuget_fetch` call for the workspace
-* **Must not** be a target framework alias i.e. `net8.0-windows` see [issue #153](https://github.com/samhowes/rules_msbuild/issues/153)
+* **Must not** be a target framework alias i.e. `net10.0-windows` see [issue #153](https://github.com/samhowes/rules_msbuild/issues/153)
 
 If this target has NuGet dependencies, this TFM **must** be listed for restore in the `nuget_fetch`
 call for the workspace.
@@ -348,7 +348,7 @@ call for the workspace.
 msbuild_library(
     name = "Foo",
     srcs = ["Bar.cs"],
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     deps = ["@nuget//NewtonSoft.Json"],
 )
 ```
@@ -357,9 +357,9 @@ Requires that the following must be specified:
 nuget_fetch(
     name = "nuget",
     packages = {
-        "NewtonSoft.Json/13.0.1": ["net8.0"],
+        "NewtonSoft.Json/13.0.1": ["net10.0"],
     },
-    target_frameworks = ["net8.0"],
+    target_frameworks = ["net10.0"],
 )
 ```
 > Note: `@rules_msbuild//gazelle/dotnet` will maintain the `target_framework` and `nuget_fetch` rule for you: After
@@ -439,7 +439,7 @@ Defaults to `"test"`
 
 i.e. given:
 ```
-msbuild_binary(name = "Foo", lang = "fs", target_framework = "net8.0")
+msbuild_binary(name = "Foo", lang = "fs", target_framework = "net10.0")
 ```
 
 rules_msbuild will attempt to compile `Foo.fsproj` by globbing for `**/*.fs` files.
@@ -496,7 +496,7 @@ Defaults to `[]`
 If `project_file` is not specified, the extension of these files will be used to infer the project name.
 i.e. given:
 ```
-msbuild_binary(name = "Foo", srcs = ["Program.cs"], target_framework = "net8.0")
+msbuild_binary(name = "Foo", srcs = ["Program.cs"], target_framework = "net10.0")
 ```
 
 rules_msbuild will attempt to compile `Foo.csproj`.
@@ -506,11 +506,11 @@ Defaults to `[]`
 <h4 id="msbuild_test-target_framework">target_framework</h4>
 
 (*String, mandatory*): The [Target Framework Moniker (TFM)](https://docs.microsoft.com/en-us/dotnet/standard/frameworks#supported-target-frameworks)
-of the target framework to compile for, i.e. `net8.0`, `netstandard2.0` etc.
+of the target framework to compile for, i.e. `net10.0`, `netstandard2.0` etc.
 
 * **Must** match the evaluated `<TargetFramework>` property in the project file
 * **Must** be listed in the `target_frameworks` attribute of the `nuget_fetch` call for the workspace
-* **Must not** be a target framework alias i.e. `net8.0-windows` see [issue #153](https://github.com/samhowes/rules_msbuild/issues/153)
+* **Must not** be a target framework alias i.e. `net10.0-windows` see [issue #153](https://github.com/samhowes/rules_msbuild/issues/153)
 
 If this target has NuGet dependencies, this TFM **must** be listed for restore in the `nuget_fetch`
 call for the workspace.
@@ -518,7 +518,7 @@ call for the workspace.
 msbuild_library(
     name = "Foo",
     srcs = ["Bar.cs"],
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     deps = ["@nuget//NewtonSoft.Json"],
 )
 ```
@@ -527,9 +527,9 @@ Requires that the following must be specified:
 nuget_fetch(
     name = "nuget",
     packages = {
-        "NewtonSoft.Json/13.0.1": ["net8.0"],
+        "NewtonSoft.Json/13.0.1": ["net10.0"],
     },
-    target_frameworks = ["net8.0"],
+    target_frameworks = ["net10.0"],
 )
 ```
 > Note: `@rules_msbuild//gazelle/dotnet` will maintain the `target_framework` and `nuget_fetch` rule for you: After

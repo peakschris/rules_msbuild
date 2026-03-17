@@ -132,8 +132,8 @@ namespace RulesMSBuild.Tools.Builder
 
         public ProjectInstance? BeginBuild()
         {
-            // GlobalProjectCollection loads EnvironmentVariables on Init. We use ExecRoot in the project files, we 
-            // can't use MSBuildStartupDirectory because NuGet Restore uses a static graph restore which starts up a 
+            // GlobalProjectCollection loads EnvironmentVariables on Init. We use ExecRoot in the project files, we
+            // can't use MSBuildStartupDirectory because NuGet Restore uses a static graph restore which starts up a
             // new process in the directory of the project file. We could set ExecRoot in the ProjectCollection Global
             // properties, but then we'd have to manage its value in the ConfigCache of the build manager later on.
             // Setting it here allows the project file to read it for paths and we don't have to clear it later.
@@ -230,7 +230,7 @@ namespace RulesMSBuild.Tools.Builder
                     // this invalidates cache entries since they are keyed by ProjectFullPath + GlobalProperties
                     // We enforce a single target framework though, so this specification is not necessary
                     //
-                    // additionally, it rebuilds targets that produce outputs, like writing to an Assembly References 
+                    // additionally, it rebuilds targets that produce outputs, like writing to an Assembly References
                     // cache file, and Bazel will have those files marked as ReadOnly, so MSBuild will fail the build because
                     // it can't write to that file.
 
@@ -243,9 +243,9 @@ namespace RulesMSBuild.Tools.Builder
             _buildManager.PendBuildRequest(data)
                 .ExecuteAsync(submission =>
                 {
-                    var result = submission.BuildResult.OverallResult;
+                    var result = submission.BuildResult?.OverallResult ?? BuildResultCode.Failure;
 
-                    if (submission.BuildResult.Exception != null)
+                    if (submission.BuildResult?.Exception != null)
                     {
                         Error(submission.BuildResult.Exception.ToString());
                     }

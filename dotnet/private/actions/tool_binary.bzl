@@ -10,10 +10,18 @@ def build_tool_binary(ctx, dotnet):
     tool. Since this is part of the toolchain itself, it can't execute a multiphase restore, build, publish,
     because bazel's sandboxing/remote execution will cause msbuild to not be able to find reference paths between
     actions. So instead, we execute all msbuild steps in a single action via invoking the publish target directly.
+
+    The entire publish/ directory is declared as a TreeArtifact so that all files produced by `dotnet publish`
+    (including <name>.runtimeconfig.json, <name>.deps.json, etc.) are captured and available to downstream
+    sandboxed actions.  Without this, dotnet would not find <name>.runtimeconfig.json and would attempt to run
+    the builder as a self-contained app, failing with 'libhostpolicy.so not found'.
     """
     dep_files = _process_deps(ctx, dotnet)
-    assembly = ctx.actions.declare_file(paths.join("publish", ctx.attr.name + ".dll"))
-    output_dir = assembly.dirname
+    # Declare the whole publish/ directory as a TreeArtifact so every file produced by
+    # `dotnet publish` (runtimeconfig.json, deps.json, satellite DLLs, …) is captured.
+    publish_dir = ctx.actions.declare_directory("publish")
+    output_dir = publish_dir.path
+    exe_path = paths.join(publish_dir.path, ctx.attr.name + ".dll")
 
     args = ctx.actions.args()
     args.add_all([
@@ -28,7 +36,7 @@ def build_tool_binary(ctx, dotnet):
         ctx.files.srcs + [ctx.file.project_file, dotnet.sdk.config.nuget_config] + ctx.files.bazel_packages,
         transitive = [dep_files, dotnet.sdk.runfiles],
     )
-    outputs = [assembly]
+    outputs = [publish_dir]
 
     binlog = add_diagnostics(ctx, dotnet, outputs)
     if binlog != None:
@@ -47,7 +55,8 @@ def build_tool_binary(ctx, dotnet):
         }),
     )
     return DotnetLibraryInfo(
-        assembly = assembly,
+        assembly = publish_dir,
+        exe_path = exe_path,
         output_dir = output_dir,
     ), outputs
 

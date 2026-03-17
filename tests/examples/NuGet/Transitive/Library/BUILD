@@ -5,7 +5,7 @@ msbuild_library(
     name = "Library",
     srcs = ["JsonParser.cs"],
     project_file = "Library.csproj",
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     visibility = ["//tests/examples/NuGet/Transitive:__subpackages__"],
     deps = [
         "@nuget//Newtonsoft.Json",
@@ -15,7 +15,7 @@ msbuild_library(
 build_test(
     name = "Library_test",
     expected_files = {
-        "net8.0": [
+        "net10.0": [
             "Library.dll",
             "!Newtonsoft.Json.dll",
         ],

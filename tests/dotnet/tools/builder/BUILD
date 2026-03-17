@@ -14,7 +14,7 @@ msbuild_test(
         "TestProgram.cs",
     ],
     dotnet_cmd = "exec",
-    target_framework = "net8.0",
+    target_framework = "net10.0",
     test_env = {
         "BAZEL_DOTNET_SDKROOT": "$(BAZEL_DOTNET_SDKROOT)",
     },
@@ -26,6 +26,7 @@ msbuild_test(
         "@nuget//Microsoft.NET.Test.Sdk",
         "@nuget//Moq",
         "@nuget//SamHowes.Microsoft.Build",
+        "@nuget//SamHowes.Microsoft.Build.Framework",
         "@nuget//xunit.assert",
         "@nuget//xunit.console",
         "@nuget//xunit.core",

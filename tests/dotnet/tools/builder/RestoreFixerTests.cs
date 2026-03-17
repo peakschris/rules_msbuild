@@ -56,7 +56,7 @@ namespace BuilderTests
                 package = "foo",
                 nuget_config = "nuget.config",
                 directory_bazel_props = "bazel_props.props",
-                tfm = "net8.0",
+                tfm = "net10.0",
                 configuration = "debug",
                 DirectorySrcs = ArraySegment<string>.Empty,
                 Action = "restore",

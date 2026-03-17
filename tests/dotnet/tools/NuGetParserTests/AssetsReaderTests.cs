@@ -16,7 +16,7 @@ namespace NuGetParserTests
         private readonly Mock<Files> _files;
         private readonly AssetsReader _assetsReader;
         const string ObjDirectory = "foo-obj";
-        const string Tfm = "net8.0";
+        const string Tfm = "net10.0";
         const string DotnetRoot = "dotnet_root";
         const string PackagesFolder = "packages_folder";
 
@@ -67,7 +67,7 @@ namespace NuGetParserTests
         {
             SetupAssets((json) =>
             {
-                json["project"]["frameworks"]["net8.0"]["downloadDependencies"] = JArray.Parse(@"[
+                json["project"]["frameworks"]["net10.0"]["downloadDependencies"] = JArray.Parse(@"[
           {
             ""name"": ""Microsoft.NETCore.App.Ref"",
             ""version"": ""[3.1.0, 3.1.0]""

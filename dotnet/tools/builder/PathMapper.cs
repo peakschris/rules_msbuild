@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Build;
 using Microsoft.Build.BackEnd;
 using RulesMSBuild.Tools.Builder.MSBuild;
+using System.Reflection;
 
 namespace RulesMSBuild.Tools.Builder
 {
@@ -37,7 +38,7 @@ namespace RulesMSBuild.Tools.Builder
         {
             if (_instance != null)
                 throw new InvalidOperationException("There can only be one PathMapper instantiated at a time.");
-            if (!execRoot.StartsWith(outputBase))
+            if (!execRoot.StartsWith(outputBase, StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException($"Unexpected output_base<>exec_root combination: {outputBase}<>{execRoot}");
             _outputBase = outputBase;
             // bazel invokes us at $output_base/sandbox/darwin-sandbox/17/execroot/<workspace_name>

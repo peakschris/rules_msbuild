@@ -10,7 +10,7 @@ namespace RulesMSBuild.Tools.RunfilesTests
         {
             var r = Runfiles.Create();
             var contents =
-                File.ReadAllText(r.Rlocation("rules_msbuild/tests/dotnet/tools/runfiles/integration/foo.txt"));
+                File.ReadAllText(r.Rlocation("_main/tests/dotnet/tools/runfiles/integration/foo.txt"));
 
             Console.Write(contents);
         }

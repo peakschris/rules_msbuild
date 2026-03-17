@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework Condition="$(BazelFetch) == 'true'">net8.0</TargetFramework>
-    <TargetFramework Condition="$(BazelFetch) == ''">net8.0</TargetFramework>
+    <TargetFramework Condition="$(BazelFetch) == 'true'">net10.0</TargetFramework>
+    <TargetFramework Condition="$(BazelFetch) == ''">net10.0</TargetFramework>
     <RootNamespace>NuGetParser</RootNamespace>
   </PropertyGroup>
 

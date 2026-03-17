@@ -11,15 +11,14 @@ def publish(ctx):
 
     dotnet = dotnet_exec_context(ctx, info.executable, False, restore.target_framework)
 
-    output_dir = None
+    output_dir = ctx.actions.declare_directory(paths.join("publish", dotnet.config.tfm))
 
     launcher = None
     launcher_windows = None
-    if info.executable:
-        launcher = ctx.actions.declare_file(paths.join("publish", dotnet.config.tfm, restore.assembly_name))
-        launcher_windows = ctx.actions.declare_file(restore.assembly_name + ".exe", sibling = launcher)
-    else:
-        output_dir = ctx.actions.declare_directory(paths.join("publish", dotnet.config.tfm))
+
+    # if info.executable:
+    #     launcher = ctx.actions.declare_file(paths.join("publish", dotnet.config.tfm, restore.assembly_name))
+    #     launcher_windows = ctx.actions.declare_file(restore.assembly_name + ".exe", sibling = launcher)
 
     cache = declare_caches(ctx, "publish")
 
@@ -33,14 +32,10 @@ def publish(ctx):
     runfiles_manifest = manual_runfiles(ctx, info)
 
     inputs = depset(
-        [cache_manifest, ctx.file._launcher_template, runfiles_manifest],
-        transitive = [info.files, info.runfiles],
+        [cache_manifest, ctx.file._launcher_template, runfiles_manifest] + info.files.to_list(),
+        transitive = [info.runfiles],
     )
-    outputs = [cache.result, cache.project] + cmd_outputs + (
-        [launcher, launcher_windows] if info.executable else []
-    ) + (
-        [output_dir] if output_dir else []
-    )
+    outputs = [output_dir, cache.result, cache.project] + cmd_outputs
 
     ctx.actions.run(
         mnemonic = "DotnetPublish",

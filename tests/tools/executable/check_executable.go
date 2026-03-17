@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -37,7 +38,8 @@ func SetupFakeRunfiles(t *testing.T, binName string) string {
 		t.Fatalf("failed to create tmp dir: %v", err)
 	}
 
-	fakeRunfilesDir := path.Join(tmpDir, binName+".runfiles")
+	baseName := path.Base(binName)
+	fakeRunfilesDir := path.Join(tmpDir, baseName+".runfiles")
 	thisRunfilesDir := files.ComputeRunfilesDir(os.Args[0])
 	err = shutil.CopyTree(thisRunfilesDir, fakeRunfilesDir, nil)
 	t.Logf("created runfiles tree at: %s\n", fakeRunfilesDir)
@@ -45,7 +47,7 @@ func SetupFakeRunfiles(t *testing.T, binName string) string {
 		t.Fatalf("failed to create new runfiles tree: %v", err)
 	}
 
-	binPath := path.Join(path.Dir(fakeRunfilesDir), files.BinName(binName))
+	binPath := path.Join(path.Dir(fakeRunfilesDir), files.BinName(baseName))
 	srcBin, _ := files.BinPath(binName)
 	t.Logf("srcBin %s\n", srcBin)
 	newPath, err := shutil.Copy(srcBin, binPath, true)
@@ -98,6 +100,7 @@ func CheckExecutableOutput(t *testing.T, config *TestConfig) {
 	}
 
 	actualErr := files.Endings(stderr.String())
+	actualErr = stripDotnetSdkWarnings(actualErr)
 	assert.Empty(t, actualErr, "command had errors")
 
 	if config.ExpectedOutput[0] == '%' {
@@ -125,4 +128,14 @@ func CheckDotnetOutput(t *testing.T, assemblyPath string, expectedOutput string)
 	os.Setenv("DOTNET_NOLOGO", "0")
 	t.Logf("dotnet path: %s\n", config.Target)
 	CheckExecutableOutput(t, &config)
+}
+
+func stripDotnetSdkWarnings(stderr string) string {
+	var kept []string
+	for _, line := range strings.Split(stderr, "\n") {
+		if !strings.HasPrefix(strings.TrimSpace(line), "An issue was encountered verifying workloads.") {
+			kept = append(kept, line)
+		}
+	}
+	return strings.TrimSpace(strings.Join(kept, "\n"))
 }

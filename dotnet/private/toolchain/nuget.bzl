@@ -168,7 +168,7 @@ def _configure_host_packages(ctx, dotnet, config):
 def _copy_parser(ctx, config):
     parser_path = ctx.path(ctx.attr._parser_project)
     for f in parser_path.dirname.readdir():
-        if f.basename in {"bin": True, "obj": True}:
+        if f.basename in {"bin": True, "obj": True, "external": True}:
             continue
         contents = ctx.read(f)
         ctx.file(config.parser_base.get_child(f.basename), contents, legacy_utf8 = False)
@@ -177,9 +177,12 @@ def _copy_parser(ctx, config):
 
 def _fetch_custom_packages(ctx, config):
     ctx.download(
-        "https://github.com/samhowes/SamHowes.Microsoft.Build/releases/download/0.0.2/SamHowes.Microsoft.Build.17.0.0.nupkg",
-        output = config.bazel_packages.get_child("SamHowes.Microsoft.Build.17.0.0.nupkg"),
-        sha256 = "cea8020962afa7d5b99c9cb97cfd383e02a8a751602ce0c41df0f8912947f938",
+        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.0.13a/SamHowes.Microsoft.Build.18.0.13.nupkg",
+        output = config.bazel_packages.get_child("SamHowes.Microsoft.Build.18.0.13.nupkg"),
+    )
+    ctx.download(
+        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.0.13a/SamHowes.Microsoft.Build.Framework.18.0.13.nupkg",
+        output = config.bazel_packages.get_child("SamHowes.Microsoft.Build.Framework.18.0.13.nupkg"),
     )
 
 def _generate_nuget_configs(ctx, config):

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using Microsoft.Build;
 using Microsoft.Build.BackEnd;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Framework;
@@ -28,9 +29,9 @@ namespace RulesMSBuild.Tools.Builder.Caching
         public readonly ResultsCache ResultsCache;
         private readonly Dictionary<TargetResult, string> _originalResults = new ();
 
-        public BuildCache(BazelContext.BazelLabel label, 
-            PathMapper pathMapper, 
-            Files files, 
+        public BuildCache(BazelContext.BazelLabel label,
+            PathMapper pathMapper,
+            Files files,
             TargetGraph? targetGraph)
         {
             ResultsCache = new BazelResultCache();
@@ -96,7 +97,7 @@ namespace RulesMSBuild.Tools.Builder.Caching
                     BuildRequest.InvalidNodeRequestId
                 ));
         }
-        
+
         public (Dictionary<string, LabelResult> caches, List<LabelResult> cachesInOrder) DeserializeCaches()
         {
             var caches = new Dictionary<string, LabelResult>();
@@ -118,15 +119,16 @@ namespace RulesMSBuild.Tools.Builder.Caching
         {
             foreach (var labelResult in cachesInOrder)
             {
-                var configs = labelResult.ConfigCache.GetEnumerator().ToArray();
+                var configs = labelResult.ConfigCache.ToList().ToArray();
                 var results = labelResult.Results;
+
+                labelResult.NewIds = new Dictionary<int, int>();
 
                 foreach (var config in configs)
                 {
                     ErrorUtilities.VerifyThrow(ConfigCache!.GetMatchingConfiguration(config) == null,
                         "Input caches should not contain entries for the same configuration");
-                    
-                    labelResult.NewIds = new Dictionary<int, int>();
+
                     var newId = _newConfigurationId();
                     labelResult.NewIds[config.ConfigurationId] = newId;
                     Result.OriginalIds[newId] = config.ConfigurationId;
@@ -144,6 +146,7 @@ namespace RulesMSBuild.Tools.Builder.Caching
                 foreach (var result in results)
                 {
                     int newConfigId;
+
                     if (labelResult.ConfigMap.TryGetValue(result.ConfigurationId, out var configSource))
                     {
                         var originalId = labelResult.OriginalIds[result.ConfigurationId];
@@ -167,7 +170,7 @@ namespace RulesMSBuild.Tools.Builder.Caching
                     {
                         // quick and dirty way to figure out which results we built in this build
                         _originalResults[targetResult.Value] = targetResult.Key;
-                        
+
                         if (cluster != null)
                         {
                             var node = cluster.GetOrAdd(targetResult.Key);
@@ -206,14 +209,14 @@ namespace RulesMSBuild.Tools.Builder.Caching
 
         private void FilterResults()
         {
-            var allResults = ResultsCache!.GetEnumerator().ToArray();
+            var allResults = ResultsCache!.ToList().ToArray();
             IEnumerable<BuildResult> resultsToKeep;
             if (_originalResults.Any())
             {
                 var list = new List<BuildResult>();
                 foreach (var result in allResults)
                 {
-                
+
                     var targetNames = new List<string>();
                     foreach (var (targetName, targetResult) in result.ResultsByTarget)
                     {
@@ -288,7 +291,7 @@ namespace RulesMSBuild.Tools.Builder.Caching
 
         private ITranslator CreateReadTranslator(Stream stream)
         {
-            return BinaryTranslator.GetReadTranslator(stream, null);
+            return BinaryTranslator.GetReadTranslator(stream, InterningBinaryReader.PoolingBuffer);
         }
 
         private ITranslator CreateWriteTranslator(Stream stream)

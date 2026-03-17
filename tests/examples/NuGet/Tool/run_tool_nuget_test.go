@@ -52,8 +52,8 @@ func TestToolPackageContents(t *testing.T) {
 		return fullP
 	}
 
-	_ = assertExists("content/runfiles/rules_msbuild/tests/examples/NuGet/Tool/foo.txt")
-	dll := assertExists("tools/net8.0/any/Tool.dll")
+	_ = assertExists("content/runfiles/_main/tests/examples/NuGet/Tool/foo.txt")
+	dll := assertExists("tools/net10.0/any/Tool.dll")
 
 	lib.CheckDotnetOutput(t, dll, "runfile contents: bar\n\n")
 

@@ -9,7 +9,7 @@ namespace Tool
         static void Main(string[] args)
         {
             var runfiles = Runfiles.Create();
-            var foo = runfiles.Rlocation("rules_msbuild/tests/examples/NuGet/Tool/foo.txt");
+            var foo = runfiles.Rlocation("_main/tests/examples/NuGet/Tool/foo.txt");
             Console.WriteLine("runfile contents: " + File.ReadAllText(foo));
         }
     }
