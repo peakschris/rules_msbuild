@@ -176,13 +176,12 @@ def _copy_parser(ctx, config):
     return config.parser_base.get_child(parser_path.basename)
 
 def _fetch_custom_packages(ctx, config):
-    # TODO: Use packages from peakschris repository
     ctx.download(
-        "https://github.com/pratham2002m/SamHowes.Microsoft.Build/releases/download/net10.0/SamHowes.Microsoft.Build.18.0.13.nupkg",
+        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.0.13a/SamHowes.Microsoft.Build.18.0.13.nupkg",
         output = config.bazel_packages.get_child("SamHowes.Microsoft.Build.18.0.13.nupkg"),
     )
     ctx.download(
-        "https://github.com/pratham2002m/SamHowes.Microsoft.Build/releases/download/net10.0/SamHowes.Microsoft.Build.Framework.18.0.13.nupkg",
+        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.0.13a/SamHowes.Microsoft.Build.Framework.18.0.13.nupkg",
         output = config.bazel_packages.get_child("SamHowes.Microsoft.Build.Framework.18.0.13.nupkg"),
     )
 

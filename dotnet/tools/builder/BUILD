@@ -69,6 +69,9 @@ msbuild_binary(
         "ProjectLoader.cs",
         "RestoreFixer.cs",
     ],
+    data = [
+        "Nuget.Config",
+    ],
     assembly_name = "builder",
     project_file = "Builder.csproj",
     target_framework = "net10.0",

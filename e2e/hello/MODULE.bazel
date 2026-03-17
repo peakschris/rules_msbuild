@@ -12,7 +12,7 @@ local_path_override(
 
 bazel_dep(name = "rules_dotnet_runtime", version = "0.0.0")
 
-RULES_DOTNET_RUNTIME_TAG = "895f52f8ca91dc9c273598afa358e73c8945ce90"
+RULES_DOTNET_RUNTIME_TAG = "e0883cea318b9642bd5ca24262fbc020155f3eb2"
 
 RULES_DOTNET_RUNTIME_INTEGRITY = "sha256-Mv7dbHwvikn6cdB5u8KJwW2PsqPIrqmNakpFlilgyfc="
 
@@ -20,7 +20,7 @@ archive_override(
     module_name = "rules_dotnet_runtime",
     integrity = RULES_DOTNET_RUNTIME_INTEGRITY,
     strip_prefix = "rules_dotnet_runtime-" + RULES_DOTNET_RUNTIME_TAG,
-    urls = ["https://github.com/pratham2002m/rules_dotnet_runtime/archive/" + RULES_DOTNET_RUNTIME_TAG + ".zip"],
+    urls = ["https://github.com/peakschris/rules_dotnet_runtime/archive/" + RULES_DOTNET_RUNTIME_TAG + ".zip"],
 )
 
 
