@@ -15,9 +15,9 @@ bazel_dep(name = "rules_proto_grpc", version = "5.7.1")
 bazel_dep(name = "rules_java", version = "8.16.1")
 bazel_dep(name = "rules_dotnet_runtime", version = "0.0.0")
 
-RULES_DOTNET_RUNTIME_TAG = "cc67ef9cfed2d872240d9931c4b0f92453d49d07"
+RULES_DOTNET_RUNTIME_TAG = "e0883cea318b9642bd5ca24262fbc020155f3eb2"
 
-RULES_DOTNET_RUNTIME_INTEGRITY = "sha256-V5XkZ3Tbzk7TKsEtZeANubBUyUpHXIi4CLmjIAps5Q4="
+RULES_DOTNET_RUNTIME_INTEGRITY = "sha256-/+LsnUMA5k97rhWaPcEuhzz6eEW+4wvrSjE0y2B0ngw="
 
 archive_override(
     module_name = "rules_dotnet_runtime",
