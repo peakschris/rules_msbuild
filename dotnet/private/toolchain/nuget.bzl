@@ -186,11 +186,14 @@ def _fetch_custom_packages(ctx, config):
     )
 
 def _generate_nuget_configs(ctx, config):
+    custom_packages = []
+    for package in ctx.attr.package_sources:
+        custom_packages.append(json.decode(package))
+
     substitutions = prepare_nuget_config(
         config.packages_folder,
         True,
-        # todo(#46) allow custom package sources
-        [
+        custom_packages + [
             {"key": "nuget.org", "value": "https://api.nuget.org/v3/index.json", "protocolVersion": "3"},
             {"key": "bazel", "value": config.bazel_packages.realpath},
             {"key": "rules_msbuild", "value": ctx.path(ctx.attr._embedded_packages).realpath.dirname},
@@ -250,6 +253,11 @@ nuget_fetch = repository_rule(
         ),
         "_embedded_packages": attr.label(
             default = Label("@rules_msbuild//.azpipelines/artifacts:packages/.gitkeep"),
+        ),
+        "package_sources": attr.string_list(
+            doc = "Additional nuget package sources to use when fetching packages'. For example: " +
+                  '{"key": "nuget.org", "value": "https://api.nuget.org/v3/index.json", "protocolVersion": "3"}',
+            default = [],
         ),
     },
 )

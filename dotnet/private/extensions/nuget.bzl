@@ -19,7 +19,12 @@ fetch = tag_class(
                    "`dotnet nuget locals global-packages --list", default = False),
         "dotnet_sdk_root": attr.label(
             doc = "Set this to @@dotnet_sdk//:ROOT",
-        )
+        ),
+        "package_sources": attr.string_list(
+            doc = "Additional nuget package sources to use when fetching packages'. For example: " +
+                  '{"key": "nuget.org", "value": "https://api.nuget.org/v3/index.json", "protocolVersion": "3"}',
+            default = [],
+        ),
     },
 )
 
@@ -35,6 +40,7 @@ def nuget_impl(mctx):
                 use_host = fetch.use_host,
                 deps = nuget_deps_helper(FRAMEWORKS, PACKAGES),
                 dotnet_sdk_root = fetch.dotnet_sdk_root,
+                package_sources = fetch.package_sources,
             )
     # The type and attributes of repositories created by this extension are fully deterministic
     # and thus don't need to be included in MODULE.bazel.lock.
