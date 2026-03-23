@@ -143,27 +143,129 @@ nuget_deps()
 ```
 
 ```python
-# //deps:nuget.bzl
+# MODULE.bazel
+# Configure dotnet SDK.
+dotnet_sdk = use_extension("@rules_msbuild//dotnet:extensions.bzl", "dotnet")
+dotnet_sdk.toolchain(
+    name = "dotnet_sdk_net10",
+    version = "<dotnet_sdk_version>",   # <-- Use correct dotnet SDK version (e.g. "10.0.103")
+    nuget_repo = "@nuget_deps//:tfm_mapping",
+    shas = {
+        "windows_amd64": "<dotnet_sdk_sha>",   # <-- Update with sha256 for desired SDK platform/version
+    },
+)
 
-load("@rules_msbuild//deps:public_nuget.bzl", "FRAMEWORKS", "PACKAGES")
-load("@rules_msbuild//dotnet:defs.bzl", "nuget_deps_helper", "nuget_fetch")
+use_repo(dotnet_sdk, "dotnet_sdk_net10")
+register_toolchains("@dotnet_sdk_net10//:all")
 
-def nuget_deps():
-    nuget_fetch(
-        name = "nuget",
-        packages = {
-            "Newtonsoft.Json/13.0.1": ["net10.0", "netstandard2.1"],
-        },
-        target_frameworks = ["net10.0", "netstandard2.1"],
-        # use_host = True will use the global packages folder
-        # use_host = False will download all packages to the bazel nuget workspace folder in isolation
-        use_host = True,
-        # rules_msbuild requires some nuget packages to run, these do not affect your workspaces
-        # NuGet package versions
-        # if you depend on other workspaces that need nuget packages, you can add them here
-        deps = nuget_deps_helper(FRAMEWORKS, PACKAGES),
-    )
+# Nuget extension setup. Add all required NuGet packages for your project.
+nuget_deps = use_extension("@rules_msbuild//dotnet:extensions.bzl", "nuget")
+nuget_deps.fetch(
+    name = "nuget_deps",
+    target_frameworks = [
+        "<target_framework>",  # e.g. "net10.0"
+    ],
+    dotnet_sdk_root = "@dotnet_sdk_net10//:ROOT",
+    packages = {
+        # Add the NuGet packages your .csproj files need:
+        # "PackageName/Version": ["net10.0"],
+        # Examples:
+        # "Newtonsoft.Json/13.0.3": ["net10.0"],
+        # "NLog/6.0.5": ["net10.0"],
+        # "Microsoft.Data.SqlClient/6.1.3": ["net10.0"],
+        # Add any additional packages from your .csproj's NuGet requirements!
+    },
+    package_sources = [
+        # Add your custom nuget package repositories here
+        '{"key": "custom-registry", "value": "<registry-location>"}'  
+    ],
+    use_host = False,
+)
+
+use_repo(nuget_deps, "nuget_deps")
 ```
+
+
+
+## Migration Guide: Migrating `rules_msbuild` from net10 to netXY
+
+This README provides all the steps required to migrate the [`rules_msbuild`](https://github.com/peakschris/rules_msbuild/) Bazel integration from .NET 10 (`net10`) to .NET 12 (`netXY`).  
+
+---
+
+### A. Setup SamHowes.Microsoft.Build
+
+1. **Clone the Repository**
+
+   ```bash
+   git clone https://github.com/peakschris/SamHowes.Microsoft.Build
+   cd SamHowes.Microsoft.Build
+   ```
+
+2. **Update MSBuild Version**  
+Edit build.sh and build.bat to replace any net10-compatible MSBuild versions with the netXY-compatible MSBuild version.  
+Check .NET releases for the correct MSBuild version for netXY.
+
+
+3. **Build SamHowes.Microsoft.Build packages**
+
+   - Run the following commands to build the packages:
+
+     ```bash
+     bash ./build.sh         # For Linux/macOS
+     ```
+     ```bash
+     ./build.bat         # For Windows
+     ```
+
+
+
+4. **Fix Runtime Issues**  
+Resolve runtime errors to build SamHowes.Microsoft.Build and SamHowes.Microsoft.Build.Framework
+
+
+5. **Release Packages on GitHub**  
+Upload build artifacts/nupkg files to github releases.   
+
+
+### B. Update rules_msbuild
+
+1. Clone the Repository
+    ```
+    git clone https://github.com/peakschris/rules_msbuild/
+    cd rules_msbuild
+    ```
+
+2. Replace net10.0 substrings with netXY.0 with help of VS Code
+
+
+3. Update all usages, including in MODULE.bazel, build scripts, and configs, to netXY.0.
+
+
+4. Update MODULE.bazel for netXY SDK
+Update SDK version/sha for netXY:
+
+    ```
+    dotnet_sdk.toolchain(
+        name = "dotnet_sdk_netXY",
+        version = "12.0.103",   # Example .NET 12 version
+        shas = {
+            "windows_amd64": "<netXY_sdk_sha>",   # Fill with netXY sdk sha256
+        },
+    )
+    ```
+
+5. Update NuGet package versions as needed for netXY compatibility.
+
+
+6. Fix Runtime Issues
+
+7. Build and test with Bazel.  
+Address build failures, dependency mismatches, and runtime exceptions.
+```
+bazel test //tests/..
+```
+
 
 # Watch out for sharp edges!
 
