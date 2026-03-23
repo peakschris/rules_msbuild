@@ -143,7 +143,7 @@ nuget_deps()
 ```
 
 ```python
-# //deps:nuget.bzl
+# MODULE.bazel
 # Configure dotnet SDK.
 dotnet_sdk = use_extension("@rules_msbuild//dotnet:extensions.bzl", "dotnet")
 dotnet_sdk.toolchain(
@@ -177,7 +177,7 @@ nuget_deps.fetch(
     },
     package_sources = [
         # Add your custom nuget package repositories here
-        '{"key": "artifactory", "value": "https://artifacts.industrysoftware.automation.siemens.com/artifactory/api/nuget/nuget/"}'  
+        '{"key": "custom-registry", "value": "<registry-location>"}'  
     ],
     use_host = False,
 )
