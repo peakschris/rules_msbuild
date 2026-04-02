@@ -25,6 +25,14 @@ fetch = tag_class(
                   '{"key": "nuget.org", "value": "https://api.nuget.org/v3/index.json", "protocolVersion": "3"}',
             default = [],
         ),
+        "credential_helper_windows": attr.string(
+            doc = "Path to the credential helper executable on Windows.",
+            default = "",
+        ),
+        "credential_helper_linux": attr.string(
+            doc = "Path to the credential helper executable on Linux/macOS.",
+            default = "",
+        ),
     },
 )
 
@@ -41,6 +49,8 @@ def nuget_impl(mctx):
                 deps = nuget_deps_helper(FRAMEWORKS, PACKAGES),
                 dotnet_sdk_root = fetch.dotnet_sdk_root,
                 package_sources = fetch.package_sources,
+                credential_helper_windows = fetch.credential_helper_windows,
+                credential_helper_linux = fetch.credential_helper_linux,
             )
     # The type and attributes of repositories created by this extension are fully deterministic
     # and thus don't need to be included in MODULE.bazel.lock.
