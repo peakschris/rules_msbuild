@@ -98,6 +98,10 @@ namespace RulesMSBuild.Tools.Builder
             TrySetProp(command.version, "Version");
             TrySetProp(command.package_version, "PackageVersion");
 
+            DeclaredPackagesFile = string.IsNullOrEmpty(command.DeclaredPackagesFile)
+                ? null
+                : ExecPath(command.DeclaredPackagesFile);
+
             if (DiagnosticsEnabled)
             {
                 MSBuild.BuildEnvironment["NUGET_SHOW_STACK"] = "true";
@@ -122,6 +126,7 @@ namespace RulesMSBuild.Tools.Builder
         public TargetGraph? TargetGraph { get; set; }
         public string? Version { get; }
         public string? PackageVersion { get; }
+        public string? DeclaredPackagesFile { get; }
         public string WorkspacePath(string path) => "/" + path[Bazel.ExecRoot.Length..];
     }
 

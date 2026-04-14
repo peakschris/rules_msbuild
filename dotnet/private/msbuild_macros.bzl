@@ -60,10 +60,13 @@ def _msbuild_assembly(
     target_framework = kwargs.pop("target_framework", None)
     restore_deps = []
     for d in deps:
-        l = Label(d)
-        rel = str(l.relative(":{}_restore".format(l.name)))
-        if rel[0] == "@" and d[0] != "@":
-            rel = "//" + rel.split("//")[1]
+        if ":" in d:
+            pkg_part, target_name = d.rsplit(":", 1)
+            rel = "{}:{}_restore".format(pkg_part, target_name)
+        else:
+            # No explicit target: target name == last path component (e.g. @repo//Pkg or //Pkg)
+            target_name = d.rsplit("/", 1)[-1]
+            rel = "{}:{}_restore".format(d, target_name)
         restore_deps.append(rel)
 
     msbuild_directory = kwargs.pop("msbuild_directory", "//:msbuild_defaults")

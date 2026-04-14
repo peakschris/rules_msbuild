@@ -88,6 +88,12 @@ namespace RulesMSBuild.Tools.Builder
 
                 var result = ExecuteBuild(project);
 
+                if (_action == "restore" && result == BuildResultCode.Success)
+                {
+                    var validator = new PackageValidator(_context);
+                    result = validator.Validate();
+                }
+
                 EndBuild(result);
                 return (int)result;
             }

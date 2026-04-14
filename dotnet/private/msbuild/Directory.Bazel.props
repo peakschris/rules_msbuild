@@ -31,11 +31,11 @@
         <NuspecOutputPath>$(OutputPath)</NuspecOutputPath>
 
         <DeterministicSourcePaths>true</DeterministicSourcePaths>
+
+        <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)/bin/**;$(MSBuildProjectDirectory)/obj/**</DefaultItemExcludes>
     </PropertyGroup>
 
     <ItemGroup>
         <SourceRoot Include="$(ExecRoot)/" />
-        <Compile Remove="$(MSBuildProjectDirectory)/obj"/>
-        <Compile Remove="$(MSBuildProjectDirectory)/bin"/>
     </ItemGroup>
 </Project>
