@@ -81,7 +81,7 @@ def _nuget_fetch_impl(ctx):
     _fetch_custom_packages(ctx, config)
     _configure_host_packages(ctx, dotnet, config)
 
-    _generate_nuget_configs(ctx, config)
+    _generate_nuget_configs(ctx, config, os)
     parser_project = _copy_parser(ctx, config)
 
     spec = ctx.attr.deps + nuget_deps_helper(ctx.attr.target_frameworks, ctx.attr.packages)
@@ -185,10 +185,73 @@ def _fetch_custom_packages(ctx, config):
         output = config.bazel_packages.get_child("SamHowes.Microsoft.Build.Framework.18.0.13.nupkg"),
     )
 
-def _generate_nuget_configs(ctx, config):
+def _fetch_credentials_for_sources(ctx, sources, os):
+    """Call the Bazel credential helper for each package source and return NuGet credential entries.
+
+    The credential helper follows the Bazel credential helper protocol:
+      stdin:  {"uri": "https://..."}
+      stdout: {"headers": {"Authorization": ["Bearer <token>"]}}
+
+    Returns a list of dicts with keys: name, username, password.
+    """
+    if os == "windows":
+        credential_helper = ctx.attr.credential_helper_windows
+    else:
+        credential_helper = ctx.attr.credential_helper_linux
+
+    credentials = []
+    for source in sources:
+        url = source.get("value", "")
+        key = source.get("key", "")
+        if not url or not key:
+            continue
+
+        # Write request JSON to a temp file — ctx.execute has no stdin support
+        req_file = "_cred_req_%s.json" % key.replace(" ", "_")
+        ctx.file(req_file, json.encode({"uri": url}))
+        req_path = str(ctx.path(req_file))
+
+        # Run from workspace root so the credential helper can find its config file
+        workspace_root = str(ctx.workspace_root)
+
+        if os == "windows":
+            cmd = ["powershell.exe", "-NoProfile", "-Command",
+                   "(Get-Content -Raw '{}') | & '{}' get".format(req_path, credential_helper)]
+        else:
+            cmd = ["sh", "-c", "cat '{}' | '{}' get".format(req_path, credential_helper)]
+        result = ctx.execute(cmd, quiet = True, working_directory = workspace_root)
+        if result.return_code != 0 or not result.stdout.strip():
+            continue
+
+        response = json.decode(result.stdout.strip())
+        headers = response.get("headers", {})
+
+        auth_value = None
+        for header_key in headers:
+            if header_key.lower() == "authorization":
+                vals = headers[header_key]
+                if vals:
+                    auth_value = vals[0]
+                break
+
+        if not auth_value:
+            continue
+
+        if auth_value.lower().startswith("bearer "):
+            credentials.append({
+                "name": key,
+                "username": source.get("credential_username", "VstsToken"),
+                "password": auth_value[7:],
+            })
+
+    return credentials
+
+def _generate_nuget_configs(ctx, config, os):
     custom_packages = []
     for package in ctx.attr.package_sources:
         custom_packages.append(json.decode(package))
+
+    package_credentials = _fetch_credentials_for_sources(ctx, custom_packages, os)
 
     substitutions = prepare_nuget_config(
         config.packages_folder,
@@ -198,6 +261,7 @@ def _generate_nuget_configs(ctx, config):
             {"key": "bazel", "value": config.bazel_packages.realpath},
             {"key": "rules_msbuild", "value": ctx.path(ctx.attr._embedded_packages).realpath.dirname},
         ],
+        package_credentials,
     )
     ctx.template(
         ctx.path(config.fetch_config),
@@ -258,6 +322,14 @@ nuget_fetch = repository_rule(
             doc = "Additional nuget package sources to use when fetching packages'. For example: " +
                   '{"key": "nuget.org", "value": "https://api.nuget.org/v3/index.json", "protocolVersion": "3"}',
             default = [],
+        ),
+        "credential_helper_windows": attr.string(
+            doc = "Path to the credential helper executable on Windows. Defaults to c:/apps/bazel/credential-helper.exe.",
+            default = "",
+        ),
+        "credential_helper_linux": attr.string(
+            doc = "Path to the credential helper executable on Linux/macOS. Defaults to /apps/bazel/credential-helper.",
+            default = "",
         ),
     },
 )
