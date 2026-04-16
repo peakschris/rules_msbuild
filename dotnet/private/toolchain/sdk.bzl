@@ -185,7 +185,6 @@ def _sdk_build_file(ctx, version):
 )""")
 
     nuget_repo = str(ctx.attr.nuget_repo).split("//")[0]
-    print(nuget_repo)
     deps_dict = {}
     for k in PACKAGES.keys():
         parts = k.split("/")

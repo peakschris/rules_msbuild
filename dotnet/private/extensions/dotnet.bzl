@@ -15,7 +15,6 @@ toolchain = tag_class(
 def dotnet_impl(mctx):
     for mod in mctx.modules:
         for toolchain in mod.tags.toolchain:
-            print("Registering dotnet sdk toolchain: %s" % toolchain.version)
             dotnet_download_sdk(
                 name = toolchain.name,
                 version = toolchain.version,
