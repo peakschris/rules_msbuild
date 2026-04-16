@@ -21,7 +21,6 @@ def restore(ctx, dotnet):
     outputs.extend([cache.result, cache.project])
 
     assembly_name = _get_assembly_name(ctx, directory_info)
-    print(directory_info)
     args, cmd_outputs = make_builder_cmd(ctx, dotnet, "restore", directory_info, assembly_name)
 
     outputs.extend(cmd_outputs)
@@ -75,7 +74,6 @@ def _process_deps(dotnet, ctx):
             files.append(info.files)
             caches.append(info.caches)
         elif NuGetPackageInfo in dep:
-            print(dep)
             get_nuget_files(dep, tfm, files)
         else:
             fail("Unkown dependency type: {}".format(dep))

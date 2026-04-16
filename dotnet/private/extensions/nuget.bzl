@@ -39,7 +39,6 @@ fetch = tag_class(
 def nuget_impl(mctx):
     for mod in mctx.modules:
         for fetch in mod.tags.fetch:
-            print("Fetching nuget packages: %s for target frameworks: %s" % (fetch.packages.keys(), fetch.target_frameworks))
             nuget_fetch(
                 name = fetch.name,
                 packages = fetch.packages,
