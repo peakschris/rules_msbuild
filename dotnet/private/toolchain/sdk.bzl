@@ -97,7 +97,7 @@ def _dotnet_download_sdk_impl(ctx):
     else:
         script_url = "https://dot.net/v1/dotnet-install.sh"
         install_script = ctx.path("dotnet_install.sh")
-        sha = "102a6849303713f15462bb28eb10593bf874bbeec17122e0522f10a3b57ce442"
+        sha = "082f7685e156738a1b2e2ed8381a621870d4ce8e8c59278034556f05c186eb2e"
         args = [str(install_script)]
 
     ctx.download(
