@@ -110,4 +110,19 @@ DOTNET_SDK_URLS = {
             # "142922cfb98b0cae6b194c3da2478fdf70f2a67603d248bbf859938bd05c4a4a5facea05d49b0db8b382d8cf73f9a45246a2022c9cf0ccf1501b1138cd0b3e76",
         ),
     },
+    "10.0.103": {
+        # https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json
+        "windows_amd64": (
+            "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.103/dotnet-sdk-10.0.103-win-x64.zip",
+            "d885cae5d0ebded98f4f05fb4637acac1e263cc525ccdb7a21cf9e58a879d2ec",
+        ),
+        "linux_amd64": (
+            "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.103/dotnet-sdk-10.0.103-linux-x64.tar.gz",
+            "84dc1f3150ec2800fa38efdbe4d65a855026d68f745c3fe06f522e87e993af0f",
+        ),
+        "darwin_amd64": (
+            "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.103/dotnet-sdk-10.0.103-osx-x64.tar.gz",
+            "",  # run bazel once without sha to get the sha256
+        ),
+    },
 }

@@ -2,6 +2,7 @@ load("@bazel_tools//tools/build_defs/repo:utils.bzl", "update_attrs")
 load("//dotnet/private:platforms.bzl", "generate_toolchain_names")
 load("//dotnet/private/msbuild:nuget.bzl", "NUGET_BUILD_CONFIG", "prepare_nuget_config")
 load("//dotnet/private/toolchain:common.bzl", "default_tfm", "detect_host_platform")
+load("//dotnet/private/toolchain:sdk_urls.bzl", "DOTNET_SDK_URLS")
 load("//deps:public_nuget.bzl", "PACKAGES")
 
 SDK_NAME = "dotnet_sdk"
@@ -19,8 +20,9 @@ def msbuild_register_toolchains(version = None, shas = {}, nuget_repo = "nuget")
     # if version == "host":
     #     _dotnet_host_sdk(name = SDK_NAME, nuget_repo = nuget_repo)
     # else:
-    if version[0] not in ["6", "7", "8"]:
-        fail("cannot use version %s; dotnet 6/7/8 is required for rules_msbuild" % version)
+    parsed = _parse_version(version)
+    if parsed == None or parsed[0] < 6:
+        fail("cannot use version %s; dotnet 6+ is required for rules_msbuild" % version)
 
     dotnet_download_sdk(
         name = SDK_NAME,
@@ -76,6 +78,25 @@ def _try_execute(ctx, args):
         fail("error {} executing `{}`: {}".format(res.return_code, " ".join(args), res.stderr))
     return res.stdout
 
+def _sdk_url(version, os, arch):
+    platform_map = {
+        ("windows", "amd64"): ("win-x64", "zip"),
+        ("windows", "arm64"): ("win-arm64", "zip"),
+        ("linux", "amd64"): ("linux-x64", "tar.gz"),
+        ("linux", "arm64"): ("linux-arm64", "tar.gz"),
+        ("darwin", "amd64"): ("osx-x64", "tar.gz"),
+        ("darwin", "arm64"): ("osx-arm64", "tar.gz"),
+    }
+    key = (os, arch)
+    if key not in platform_map:
+        fail("unsupported platform: {}_{}".format(os, arch))
+    plat, ext = platform_map[key]
+    return "https://builds.dotnet.microsoft.com/dotnet/Sdk/{v}/dotnet-sdk-{v}-{p}.{e}".format(
+        v = version,
+        p = plat,
+        e = ext,
+    )
+
 def _dotnet_download_sdk_impl(ctx):
     version = ctx.attr.version
     os, arch = detect_host_platform(ctx)
@@ -86,40 +107,15 @@ def _dotnet_download_sdk_impl(ctx):
     if platform in shas:
         sdk_sha = shas[platform]
 
-    install_script = None
-    script_url = None
-    args = None
-    sha = ""
-    if os == "windows":
-        script_url = "https://dot.net/v1/dotnet-install.ps1"
-        install_script = ctx.path("dotnet-install.ps1")
-        args = ["powershell", "-NoProfile", str(install_script)]
-    else:
-        script_url = "https://dot.net/v1/dotnet-install.sh"
-        install_script = ctx.path("dotnet_install.sh")
-        sha = "102a6849303713f15462bb28eb10593bf874bbeec17122e0522f10a3b57ce442"
-        args = [str(install_script)]
-
-    ctx.download(
-        script_url,
-        install_script,
-        sha256 = sha,
-        executable = True,
-    )
-
-    # bash supports the same as the powershell script, so we can use the same set of args
-    args.extend(["-DryRun", "-NoPath", "-Version", version])
-
-    res = ctx.execute(args)
-
+    # Look up URL from pre-configured table; fall back to constructing from version pattern
     url = None
-    for line in res.stdout.split("\n"):
-        if "- primary:" in line:
-            url = line.rsplit(" ", 1)[1]
-            break
-
+    if version in DOTNET_SDK_URLS and platform in DOTNET_SDK_URLS[version]:
+        entry = DOTNET_SDK_URLS[version][platform]
+        url = entry[0]
+        if sdk_sha == "" and len(entry) > 1 and entry[1] != "":
+            sdk_sha = entry[1]
     if url == None:
-        fail("failed to parse Primary url from:\nstdout:{}\nstderr:{}".format(res.stdout, res.stderr))
+        url = _sdk_url(version, os, arch)
 
     ctx.report_progress("Downloading Dotnet Sdk from {}".format(url))
 
