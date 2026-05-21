@@ -122,7 +122,7 @@ DOTNET_SDK_URLS = {
         ),
         "darwin_amd64": (
             "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.103/dotnet-sdk-10.0.103-osx-x64.tar.gz",
-            "",  # run bazel once without sha to get the sha256
+            "546e66d8734be3439017b93202fc925f5b1736267740111522878c61eafab765",
         ),
     },
 }
