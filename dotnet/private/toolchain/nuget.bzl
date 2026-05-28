@@ -115,6 +115,7 @@ def _nuget_fetch_impl(ctx):
         "--packages_folder=%s" % str(ctx.path(config.packages_folder)),
         "--test_logger=%s" % ctx.attr.test_logger,
         "--nuget_build_config=%s" % NUGET_BUILD_CONFIG,
+        "--nuget_fetch_config=%s" % str(config.fetch_config),
     ]
     ctx.report_progress("Fetching NuGet packages")
 
@@ -123,6 +124,7 @@ def _nuget_fetch_impl(ctx):
         environment = dicts.add(dotnet.env, {"BazelFetch": "true"}),
         quiet = True,
         working_directory = str(parser_project.dirname),
+        timeout = ctx.attr.timeout,
     )
     if result.return_code != 0:
         fail("failed executing '%s':\nstdout: %s\nstderr: %s" % (" ".join(args), result.stdout, result.stderr))
@@ -330,6 +332,10 @@ nuget_fetch = repository_rule(
         "credential_helper_linux": attr.string(
             doc = "Path to the credential helper executable on Linux/macOS. Defaults to /apps/bazel/credential-helper.",
             default = "",
+        ),
+        "timeout": attr.int(
+            doc = "Timeout in seconds for the NuGet fetch operation. Increase this if fetching many packages or from slow registries. Defaults to 1800 (30 minutes).",
+            default = 1800,
         ),
     },
 )
