@@ -33,6 +33,10 @@ fetch = tag_class(
             doc = "Path to the credential helper executable on Linux/macOS.",
             default = "",
         ),
+        "timeout": attr.int(
+            doc = "Timeout in seconds for the NuGet fetch operation. Increase this if fetching many packages or from slow registries. Defaults to 600 (10 minutes).",
+            default = 600,
+        ),
     },
 )
 
@@ -50,6 +54,7 @@ def nuget_impl(mctx):
                 package_sources = fetch.package_sources,
                 credential_helper_windows = fetch.credential_helper_windows,
                 credential_helper_linux = fetch.credential_helper_linux,
+                timeout = fetch.timeout,
             )
     # The type and attributes of repositories created by this extension are fully deterministic
     # and thus don't need to be included in MODULE.bazel.lock.
