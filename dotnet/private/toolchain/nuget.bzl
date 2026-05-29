@@ -335,7 +335,7 @@ nuget_fetch = repository_rule(
         ),
         "timeout": attr.int(
             doc = "Timeout in seconds for the NuGet fetch operation. Increase this if fetching many packages or from slow registries. Defaults to 1800 (30 minutes).",
-            default = 1800,
+            default = 600,
         ),
     },
 )
