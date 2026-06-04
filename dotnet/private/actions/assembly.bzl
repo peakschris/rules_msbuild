@@ -2,6 +2,7 @@ load("//dotnet/private:providers.bzl", "DotnetLibraryInfo", "DotnetRestoreInfo",
 load("//dotnet/private:context.bzl", "make_builder_cmd")
 load(":common.bzl", "cache_set", "declare_caches", "get_nuget_files", "write_cache_manifest")
 load("@bazel_skylib//lib:paths.bzl", "paths")
+load("@rules_proto//proto:defs.bzl", "ProtoInfo")
 
 def build_assembly(ctx, dotnet):
     restore = ctx.attr.restore[DotnetRestoreInfo]
