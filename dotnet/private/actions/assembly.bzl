@@ -22,6 +22,11 @@ def build_assembly(ctx, dotnet):
     if ctx.configuration.coverage_enabled:
         pdb = ctx.actions.declare_file(paths.join(dotnet.config.output_dir_name, restore.assembly_name + ".pdb"))
 
+    # writes <assembly>.pdb *inside* this output directory. Because `assembly` is declared as a
+    # TreeArtifact, the PDB is captured automatically as part of that tree -- do NOT declare it as
+    # a separate file output. Doing so collides with the TreeArtifact ("output path is a prefix of
+    # the other"). coverlet finds the PDB next to the dll via the tree at test runtime.
+
     # intermediate_dir is a TreeArtifact; declaring a file inside it would conflict, so we only
     # declare the directory. MSBuild will write the intermediate .dll there as well.
     intermediate_dir = ctx.actions.declare_directory(paths.join("obj", dotnet.config.tfm))
