@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"golang.org/x/sys/execabs"
 )
@@ -70,12 +71,100 @@ func LaunchDotnet(args []string, info *LaunchInfo) {
 			xmlFile,
 		)
 		assemblyArgs = append(assemblyArgs, "--logger", loggerArg)
+		assemblyArgs = append(assemblyArgs, coverageCollectArgs(info)...)
 	}
 
 	newArgs := append(dotnetArgs, assemblyArgs...)
 
 	diag(func() { fmt.Printf("==> launching: \"%s\"\n", strings.Join(newArgs, "\" \"")) })
-	launch(info, newArgs)
+	code := launch(info, newArgs)
+	postProcessCoverage(info)
+	os.Exit(code)
+}
+
+// coverageCollectArgs returns the `dotnet test` args that turn on coverlet's
+// XPlat data collector and emit lcov into $COVERAGE_DIR/_coverlet, but only when
+// running under `bazel coverage` (COVERAGE_DIR set) and the adapter was staged.
+func coverageCollectArgs(info *LaunchInfo) []string {
+	covDir := os.Getenv("COVERAGE_DIR")
+	adapterDll := info.Data["coverlet_collector_dll"]
+	if covDir == "" || adapterDll == "" {
+		return nil
+	}
+	adapterDir := filepath.Dir(info.GetRunfile(adapterDll))
+	return []string{
+		"--collect", "XPlat Code Coverage;Format=lcov",
+		"--TestAdapterPath", adapterDir,
+		"--results-directory", filepath.Join(covDir, "_coverlet"),
+	}
+}
+
+// postProcessCoverage converts coverlet's lcov output into the file Bazel expects,
+// rewriting SF: paths to be workspace-relative. No-op outside `bazel coverage`.
+func postProcessCoverage(info *LaunchInfo) {
+	covDir := os.Getenv("COVERAGE_DIR")
+	if covDir == "" {
+		return
+	}
+
+	dest := os.Getenv("COVERAGE_OUTPUT_FILE")
+	if os.Getenv("SPLIT_COVERAGE_POST_PROCESSING") == "1" {
+		dest = filepath.Join(covDir, "coverage.dat")
+	}
+	if dest == "" {
+		return
+	}
+
+	matches, _ := filepath.Glob(filepath.Join(covDir, "_coverlet", "*", "coverage.info"))
+	if len(matches) == 0 {
+		_ = os.WriteFile(dest, []byte{}, 0644)
+		return
+	}
+
+	newest := matches[0]
+	var newestT time.Time
+	for _, m := range matches {
+		if st, err := os.Stat(m); err == nil && st.ModTime().After(newestT) {
+			newestT = st.ModTime()
+			newest = m
+		}
+	}
+
+	data, err := os.ReadFile(newest)
+	if err != nil {
+		_ = os.WriteFile(dest, []byte{}, 0644)
+		return
+	}
+	_ = os.WriteFile(dest, []byte(rewriteCoverageSF(string(data))), 0644)
+}
+
+// rewriteCoverageSF rewrites every `SF:` path in an lcov file to be
+// workspace-relative. With DeterministicSourcePaths the compiler maps the bazel
+// ExecRoot to `/_/`, so stripping up to and including `/_/` yields e.g.
+// `src/oci-extract/oci-extract/Foo.cs`.
+func rewriteCoverageSF(lcov string) string {
+	debug := os.Getenv("DOTNET_LAUNCHER_DEBUG") != "" || os.Getenv("COVERAGE_DEBUG") != ""
+	dumped := 0
+	lines := strings.Split(lcov, "\n")
+	for i, line := range lines {
+		if !strings.HasPrefix(line, "SF:") {
+			continue
+		}
+		raw := strings.ReplaceAll(line[3:], "\\", "/")
+		if debug && dumped < 5 {
+			fmt.Fprintf(os.Stderr, "INFO[dotnet.coverage]: raw SF: %s\n", raw)
+			dumped++
+		}
+		p := raw
+		if idx := strings.Index(p, "/_/"); idx >= 0 {
+			p = p[idx+3:]
+		} else if idx := strings.Index(p, "/bin/"); idx >= 0 {
+			// Fallback: strip up to and including the bazel-out bin dir.
+			p = p[idx+len("/bin/"):]
+		}
+		lines[i] = "SF:" + p
+	}
+	return strings.Join(lines, "\n")
 }
 
 func LaunchDotnetPublish(args []string, info *LaunchInfo) {
@@ -102,10 +191,12 @@ func LaunchDotnetPublish(args []string, info *LaunchInfo) {
 		"exec",
 		assembly,
 	}, args[1:]...)
-	launch(info, newArgs)
+	os.Exit(launch(info, newArgs))
 }
 
-func launch(info *LaunchInfo, args []string) {
+// launch runs the command and, in "wait" mode, returns its exit code instead of
+// exiting the process, so callers can run post-processing (e.g. coverage) first.
+func launch(info *LaunchInfo, args []string) int {
 	launchMode, ok := info.Data["launch_mode"]
 	if !ok {
 		launchMode = "wait"
@@ -121,7 +212,6 @@ func launch(info *LaunchInfo, args []string) {
 		panic(fmt.Errorf("failed to launch command: %s\n%v", cmd.String(), err))
 	}
 
-	var code int
 	diag(func() { fmt.Printf("Started PID %d\n", cmd.Process.Pid) })
 	if launchMode == "wait" {
 		// when bazel runs a command, it will only pay attention to the parent process, not the child, so we need to
@@ -132,12 +222,12 @@ func launch(info *LaunchInfo, args []string) {
 			panic(fmt.Errorf("failed to wait on cmd %s\n%v", cmd.String(), err))
 		}
 		diag(func() { fmt.Printf("cmd completed: %s\n", state.String()) })
-		code = state.ExitCode()
-		os.Exit(code)
-	} else {
-		if err := cmd.Process.Release(); err != nil {
-			panic(fmt.Errorf("failed to detach from launched command %s\n%v", cmd.String(), err))
-		}
-		diag(func() { fmt.Printf("released\n") })
+		return state.ExitCode()
 	}
+
+	if err := cmd.Process.Release(); err != nil {
+		panic(fmt.Errorf("failed to detach from launched command %s\n%v", cmd.String(), err))
+	}
+	diag(func() { fmt.Printf("released\n") })
+	return 0
 }

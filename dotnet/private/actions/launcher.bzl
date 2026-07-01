@@ -2,7 +2,7 @@ load("@bazel_skylib//lib:dicts.bzl", "dicts")
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//dotnet/private/util:util.bzl", "to_manifest_path")
 
-def make_launcher(ctx, dotnet, info):
+def make_launcher(ctx, dotnet, info, coverlet_collector_dll = None):
     sdk = dotnet.sdk
 
     launcher = ctx.actions.declare_file(
@@ -36,6 +36,9 @@ def make_launcher(ctx, dotnet, info):
         "dotnet_cmd": "exec",
         "dotnet_logger": "junit",
         "log_path_arg_name": "LogFilePath",
+        # Manifest path of coverlet.collector.dll (adapter dir resolved at runtime via
+        # its parent). Empty unless built under `bazel coverage`.
+        "coverlet_collector_dll": to_manifest_path(ctx, coverlet_collector_dll) if coverlet_collector_dll else "",
     }
 
     is_test = getattr(dotnet.config, "is_test", False)
