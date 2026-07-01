@@ -155,6 +155,12 @@ def _configure_host_packages(ctx, dotnet, config):
     start = ind + len(cache_type) + 2
     location = result.stdout[start:].strip()
 
+    # `dotnet nuget locals` prints a native path; on Windows that uses backslashes,
+    # which ctx.symlink/ctx.path do not treat as separators (they collapse into a
+    # single mangled component). Normalize to forward slashes so the absolute host
+    # path is recognized. No-op on Linux/macOS.
+    location = location.replace("\\", "/")
+
     # it's possible that the packages folder doesn't exist yet, if it doesn't the symlink won't be functional
     # this mostly likely won't be the case in actual usage, but is definitely possible if the folder has been
     # cleaned, like on a fresh CI instance for example.

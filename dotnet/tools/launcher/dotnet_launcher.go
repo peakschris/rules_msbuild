@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -47,7 +48,6 @@ func LaunchDotnet(args []string, info *LaunchInfo) {
 		}
 	}
 
-
 	workspace := info.GetItem("workspace_name")
 	pkg := info.GetItem("package")
 	_ = os.Setenv("DOTNET_RUNFILES_WORKSPACE", workspace)
@@ -71,7 +71,21 @@ func LaunchDotnet(args []string, info *LaunchInfo) {
 			xmlFile,
 		)
 		assemblyArgs = append(assemblyArgs, "--logger", loggerArg)
-		assemblyArgs = append(assemblyArgs, coverageCollectArgs(info)...)
+		if covArgs := coverageCollectArgs(info); len(covArgs) > 0 {
+			// coverlet's XPlat collector instruments assemblies IN PLACE (backup ->
+			// rewrite -> restore original), which needs write access to the DLLs.
+			// bazel-out outputs are read-only, so coverlet throws
+			// UnauthorizedAccessException and emits empty coverage. Stage a writable
+			// copy of the test output tree and run against that. Source-line mapping
+			// is unaffected: the PDBs still carry the original source paths.
+			if writableBin, err := stageWritableCopy(targetBinPath); err != nil {
+				log.Printf("coverage: could not stage writable copy (%v); coverage may be empty", err)
+			} else {
+				targetBinPath = writableBin
+				assemblyArgs[0] = targetBinPath
+			}
+			assemblyArgs = append(assemblyArgs, covArgs...)
+		}
 	}
 
 	newArgs := append(dotnetArgs, assemblyArgs...)
@@ -97,6 +111,72 @@ func coverageCollectArgs(info *LaunchInfo) []string {
 		"--TestAdapterPath", adapterDir,
 		"--results-directory", filepath.Join(covDir, "_coverlet"),
 	}
+}
+
+// stageWritableCopy copies the directory containing testBinPath (the whole
+// output tree: DLLs, deps.json, runtimeconfig.json, PDBs) into a fresh writable
+// directory under $TEST_TMPDIR (falling back to the OS temp dir) and returns the
+// path to the copied test assembly. coverlet needs the assemblies writable to
+// instrument them in place; bazel-out is read-only.
+func stageWritableCopy(testBinPath string) (string, error) {
+	srcDir := filepath.Dir(testBinPath)
+	base := filepath.Base(srcDir)
+
+	root := os.Getenv("TEST_TMPDIR")
+	if root == "" {
+		root = os.TempDir()
+	}
+	dstDir := filepath.Join(root, "_covwritable", base)
+	if err := os.RemoveAll(dstDir); err != nil {
+		return "", err
+	}
+	if err := copyTreeWritable(srcDir, dstDir); err != nil {
+		return "", err
+	}
+	return filepath.Join(dstDir, filepath.Base(testBinPath)), nil
+}
+
+// copyTreeWritable recursively copies src to dst, forcing user-writable perms on
+// every file and directory so coverlet can rewrite the assemblies.
+func copyTreeWritable(src, dst string) error {
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(dst, 0755); err != nil {
+		return err
+	}
+	for _, e := range entries {
+		s := filepath.Join(src, e.Name())
+		d := filepath.Join(dst, e.Name())
+		if e.IsDir() {
+			if err := copyTreeWritable(s, d); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := copyFileWritable(s, d); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func copyFileWritable(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		return err
+	}
+	return out.Close()
 }
 
 // postProcessCoverage converts coverlet's lcov output into the file Bazel expects,
@@ -158,6 +238,14 @@ func rewriteCoverageSF(lcov string) string {
 		p := raw
 		if idx := strings.Index(p, "/_/"); idx >= 0 {
 			p = p[idx+3:]
+		} else if idx := strings.Index(p, "/execroot/"); idx >= 0 {
+			// Fallback: coverlet often emits absolute execroot paths like
+			// .../execroot/_main/src/foo/Bar.cs. Strip up to and including
+			// /execroot/<workspace>/ to get the workspace-relative path.
+			rest := p[idx+len("/execroot/"):]
+			if slash := strings.Index(rest, "/"); slash >= 0 {
+				p = rest[slash+1:]
+			}
 		} else if idx := strings.Index(p, "/bin/"); idx >= 0 {
 			// Fallback: strip up to and including the bazel-out bin dir.
 			p = p[idx+len("/bin/"):]
