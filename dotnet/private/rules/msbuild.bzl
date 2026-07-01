@@ -10,6 +10,45 @@ load("@rules_proto//proto:defs.bzl", "ProtoInfo")
 
 TOOLCHAINS = ["@rules_msbuild//dotnet:toolchain"]
 
+def _instrumented_files(ctx):
+    """InstrumentedFilesInfo so this target's own `cs` sources appear in coverage.
+
+    `dependency_attributes` only unions the info from deps that already *provide* it,
+    so every assembly rule (library/binary/test) must emit its own or its sources
+    never show up in the report.
+    """
+    return coverage_common.instrumented_files_info(
+        ctx,
+        source_attributes = ["srcs"],
+        dependency_attributes = ["deps"],
+        extensions = ["cs", "fs", "vb"],
+    )
+
+def _coverlet_adapter(ctx):
+    """Locate the coverlet XPlat 'Code Coverage' data collector adapter.
+
+    Returns (dll_file, [all files in the adapter dir]) so the adapter can be staged
+    into the test's runfiles and pointed at via `--TestAdapterPath`. The version/tfm
+    of `@nuget//coverlet.collector` is resolved by the nuget extension; we match on
+    the well-known `build/<tfm>/coverlet.collector.dll` marker rather than hardcoding.
+    """
+    info = ctx.attr._coverlet_collector[NuGetPackageInfo]
+    files = []
+    for d in info.frameworks.values():
+        files.extend(d.to_list())
+
+    dll = None
+    for f in files:
+        p = f.path.replace("\\", "/")
+        if "/build/" in p and p.endswith("/coverlet.collector.dll"):
+            dll = f
+            break
+    if dll == None:
+        return None, []
+
+    adapter_files = [f for f in files if f.dirname == dll.dirname]
+    return dll, adapter_files
+
 def _msbuild_tool_binary_impl(ctx):
     dotnet = dotnet_exec_context(ctx, True)
 
@@ -56,12 +95,20 @@ def _test_impl(ctx):
 def _make_executable(ctx, is_test):
     dotnet = dotnet_exec_context(ctx, True, is_test)
     info, outputs = build_assembly(ctx, dotnet)
-    launcher = make_launcher(ctx, dotnet, info)
+
+    # Under `bazel coverage`, stage the coverlet data-collector adapter into the
+    # test's runfiles and tell the launcher where to find it.
+    coverlet_dll = None
+    coverlet_files = []
+    if is_test and ctx.configuration.coverage_enabled:
+        coverlet_dll, coverlet_files = _coverlet_adapter(ctx)
+
+    launcher = make_launcher(ctx, dotnet, info, coverlet_collector_dll = coverlet_dll)
 
     launcher_info = ctx.attr._launcher_template[DefaultInfo]
     assembly_runfiles = ctx.runfiles(
         transitive_files = depset(
-            [dotnet.sdk.dotnet, info.assembly],
+            [dotnet.sdk.dotnet, info.assembly] + coverlet_files,
             transitive = [info.runfiles],
         ),
     )
@@ -75,6 +122,7 @@ def _make_executable(ctx, is_test):
             executable = launcher,
         ),
         info,
+        _instrumented_files(ctx),
         OutputGroupInfo(
             all = outputs,
         ),
@@ -89,6 +137,7 @@ def _library_impl(ctx):
             runfiles = ctx.runfiles(transitive_files = info.runfiles),
         ),
         info,
+        _instrumented_files(ctx),
         OutputGroupInfo(
             all = outputs,
         ),
@@ -320,6 +369,21 @@ msbuild_test = rule(
     attrs = dicts.add(_EXECUTABLE_ATTRS, {
         "dotnet_cmd": attr.string(default = "test"),
         "test_env": attr.string_dict(),
+        # Trivial lcov merger (split-postprocessing copy / non-split no-op). Replaces
+        # Bazel's default merger, which would re-filter and drop coverlet's lcov.
+        "_lcov_merger": attr.label(
+            default = "@rules_msbuild//dotnet/tools/coverage:merger",
+            executable = True,
+            cfg = "exec",
+        ),
+        # coverlet XPlat 'Code Coverage' data collector, staged into runfiles and
+        # passed via --TestAdapterPath under `bazel coverage`. Indirected through a
+        # label_flag so a consuming repo can point it at its own nuget repo
+        # (servicemesh uses @nuget_deps, not this module's dev @nuget).
+        "_coverlet_collector": attr.label(
+            default = "@rules_msbuild//dotnet/tools/coverage:coverlet_collector",
+            providers = [NuGetPackageInfo],
+        ),
     }),
     executable = True,
     test = True,

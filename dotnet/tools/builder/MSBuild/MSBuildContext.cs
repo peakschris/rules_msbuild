@@ -46,6 +46,16 @@ namespace RulesMSBuild.Tools.Builder.MSBuild
                     break;
             }
 
+            // Under `bazel coverage`, coverlet needs portable PDBs to map IL back to source.
+            // Override the config-driven suppression above so symbols are always emitted for
+            // coverage builds (gated on the --coverage flag set by the Starlark rules, so normal
+            // builds are unaffected).
+            if (!string.IsNullOrEmpty(command.coverage))
+            {
+                GlobalProperties["DebugType"] = "portable";
+                GlobalProperties["DebugSymbols"] = "true";
+            }
+
             BuildEnvironment = new Dictionary<string, string>()
             {
                 ["ImportDirectoryBuildProps"] = "true",

@@ -175,6 +175,13 @@ def make_builder_cmd(ctx, dotnet, action, directory_info, assembly_name):
     ])
     if dotnet.config.is_test:
         args.add_all(["--is_test", True])
+
+    # Under `bazel coverage`, tell the builder to emit portable PDBs so coverlet can
+    # instrument the assembly. Gated on the whole-build coverage config (not the
+    # per-target instrumentation filter) so the library under test gets PDBs even when
+    # it is filtered out of the report itself.
+    if ctx.configuration.coverage_enabled:
+        args.add_all(["--coverage", "true"])
     return args, outputs
 
 def make_cmd(project_path, msbuild_target, binlog_path = None):

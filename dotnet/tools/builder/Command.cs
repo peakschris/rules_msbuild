@@ -68,6 +68,8 @@ namespace RulesMSBuild.Tools.Builder
 
         [Option("is_test", Required = false)] public string is_test { get; set; }
 
+        [Option("coverage", Required = false)] public string coverage { get; set; }
+
         [Option("runfiles_manifest", Required = false)]
         public string RunfilesManifest { get; set; }
 

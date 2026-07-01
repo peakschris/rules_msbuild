@@ -123,10 +123,40 @@ fi
 assembly_args=("$target_bin_path" %assembly_args%)
 assembly_args+=("$@")
 dotnet_cmd="%dotnet_cmd%"
+coverlet_collector_dll="%coverlet_collector_dll%"
 if [[ $dotnet_cmd == "test" ]]; then
   assembly_args+=("--logger" "%dotnet_logger%;%log_path_arg_name%=${XML_OUTPUT_FILE:-"test.xml"}")
+  # Under `bazel coverage`, turn on coverlet's XPlat collector and emit lcov.
+  if [[ -n "${COVERAGE_DIR:-}" && -n "$coverlet_collector_dll" ]]; then
+    adapter_dir="$(dirname "$(rlocation "$coverlet_collector_dll")")"
+    assembly_args+=("--collect" "XPlat Code Coverage;Format=lcov" \
+      "--TestAdapterPath" "$adapter_dir" \
+      "--results-directory" "${COVERAGE_DIR}/_coverlet")
+  fi
 fi
 
 dotnet_args=("$dotnet_cmd" %dotnet_args%)
 
+set +e
 $dotnet_bin_path "${dotnet_args[@]}" "${assembly_args[@]}"
+rc=$?
+set -e
+
+# Convert coverlet's lcov into the file Bazel expects, rewriting SF: paths to be
+# workspace-relative (DeterministicSourcePaths maps the ExecRoot to /_/).
+if [[ -n "${COVERAGE_DIR:-}" ]]; then
+  dest="${COVERAGE_OUTPUT_FILE:-}"
+  if [[ "${SPLIT_COVERAGE_POST_PROCESSING:-}" == 1 ]]; then
+    dest="${COVERAGE_DIR}/coverage.dat"
+  fi
+  if [[ -n "$dest" ]]; then
+    src="$(ls -t "${COVERAGE_DIR}"/_coverlet/*/coverage.info 2>/dev/null | head -n1 || true)"
+    if [[ -n "$src" && -f "$src" ]]; then
+      sed -E -e 's#^SF:.*/_/#SF:#; t' -e 's#^SF:.*/bin/#SF:#' "$src" > "$dest"
+    else
+      : > "$dest"
+    fi
+  fi
+fi
+
+exit $rc

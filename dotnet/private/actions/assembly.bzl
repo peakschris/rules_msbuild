@@ -15,6 +15,13 @@ def build_assembly(ctx, dotnet):
     # deps.json was absent from the publish sandbox.
     assembly = ctx.actions.declare_directory(dotnet.config.output_dir_name)
 
+    # Under `bazel coverage`, the builder forces portable PDBs (see MSBuildContext.cs); MSBuild
+    # writes <assembly>.pdb next to the dll in the bazel-bin output dir. Declare it so Bazel tracks
+    # and propagates it (coverlet needs it next to the dll at test runtime to map IL -> source).
+    pdb = None
+    if ctx.configuration.coverage_enabled:
+        pdb = ctx.actions.declare_file(paths.join(dotnet.config.output_dir_name, restore.assembly_name + ".pdb"))
+
     # intermediate_dir is a TreeArtifact; declaring a file inside it would conflict, so we only
     # declare the directory. MSBuild will write the intermediate .dll there as well.
     intermediate_dir = ctx.actions.declare_directory(paths.join("obj", dotnet.config.tfm))
@@ -40,6 +47,8 @@ def build_assembly(ctx, dotnet):
         cache.project,
         cache.result,
     ] + cmd_outputs
+    if pdb != None:
+        outputs.append(pdb)
 
     ctx.actions.run(
         mnemonic = "MSBuild",
@@ -54,9 +63,16 @@ def build_assembly(ctx, dotnet):
     info = DotnetLibraryInfo(
         assembly = assembly,
         output_dir = assembly,
+        pdb = pdb,
         files = depset(direct = outputs, transitive = [inputs]),
         caches = cache_set([cache], transitive = [caches]),
-        runfiles = depset(ctx.files.data, transitive = runfiles),
+        # Carry the PDB as a runtime file so a dependency's .pdb lands next to its .dll in the
+        # test's runfiles tree, where coverlet looks for it. transitive `runfiles` already pulls
+        # in dependency PDBs the same way.
+        runfiles = depset(
+            ctx.files.data + ([pdb] if pdb != None else []),
+            transitive = runfiles,
+        ),
         project_cache = cache.project,
         restore = restore,
         executable = dotnet.config.is_executable,
