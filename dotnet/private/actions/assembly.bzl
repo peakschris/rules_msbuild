@@ -16,12 +16,6 @@ def build_assembly(ctx, dotnet):
     assembly = ctx.actions.declare_directory(dotnet.config.output_dir_name)
 
     # Under `bazel coverage`, the builder forces portable PDBs (see MSBuildContext.cs); MSBuild
-    # writes <assembly>.pdb next to the dll in the bazel-bin output dir. Declare it so Bazel tracks
-    # and propagates it (coverlet needs it next to the dll at test runtime to map IL -> source).
-    pdb = None
-    if ctx.configuration.coverage_enabled:
-        pdb = ctx.actions.declare_file(paths.join(dotnet.config.output_dir_name, restore.assembly_name + ".pdb"))
-
     # writes <assembly>.pdb *inside* this output directory. Because `assembly` is declared as a
     # TreeArtifact, the PDB is captured automatically as part of that tree -- do NOT declare it as
     # a separate file output. Doing so collides with the TreeArtifact ("output path is a prefix of
@@ -52,8 +46,6 @@ def build_assembly(ctx, dotnet):
         cache.project,
         cache.result,
     ] + cmd_outputs
-    if pdb != None:
-        outputs.append(pdb)
 
     ctx.actions.run(
         mnemonic = "MSBuild",
@@ -68,14 +60,13 @@ def build_assembly(ctx, dotnet):
     info = DotnetLibraryInfo(
         assembly = assembly,
         output_dir = assembly,
-        pdb = pdb,
         files = depset(direct = outputs, transitive = [inputs]),
         caches = cache_set([cache], transitive = [caches]),
-        # Carry the PDB as a runtime file so a dependency's .pdb lands next to its .dll in the
-        # test's runfiles tree, where coverlet looks for it. transitive `runfiles` already pulls
-        # in dependency PDBs the same way.
+        # Dependency PDBs ride along inside each dependency's output-dir TreeArtifact, which the
+        # transitive `runfiles` already pulls in, so they land next to their .dll in the test's
+        # runfiles tree where coverlet looks for them.
         runfiles = depset(
-            ctx.files.data + ([pdb] if pdb != None else []),
+            ctx.files.data,
             transitive = runfiles,
         ),
         project_cache = cache.project,
