@@ -129,6 +129,20 @@ if [[ $dotnet_cmd == "test" ]]; then
   # Under `bazel coverage`, turn on coverlet's XPlat collector and emit lcov.
   if [[ -n "${COVERAGE_DIR:-}" && -n "$coverlet_collector_dll" ]]; then
     adapter_dir="$(dirname "$(rlocation "$coverlet_collector_dll")")"
+    # coverlet's XPlat collector instruments assemblies IN PLACE (backup ->
+    # rewrite -> restore), which needs writable DLLs. bazel-out is read-only, so
+    # coverlet throws and emits empty coverage. Stage a writable copy of the test
+    # output tree and run against that. PDBs keep the original source paths, so
+    # line mapping is unaffected.
+    src_dir="$(dirname "$target_bin_path")"
+    writable_root="${TEST_TMPDIR:-${TMPDIR:-/tmp}}/_covwritable"
+    writable_dir="${writable_root}/$(basename "$src_dir")"
+    rm -rf "$writable_dir"
+    mkdir -p "$writable_dir"
+    cp -R "$src_dir/." "$writable_dir/"
+    chmod -R u+w "$writable_dir"
+    target_bin_path="${writable_dir}/$(basename "$target_bin_path")"
+    assembly_args[0]="$target_bin_path"
     assembly_args+=("--collect" "XPlat Code Coverage;Format=lcov" \
       "--TestAdapterPath" "$adapter_dir" \
       "--results-directory" "${COVERAGE_DIR}/_coverlet")
@@ -152,7 +166,13 @@ if [[ -n "${COVERAGE_DIR:-}" ]]; then
   if [[ -n "$dest" ]]; then
     src="$(ls -t "${COVERAGE_DIR}"/_coverlet/*/coverage.info 2>/dev/null | head -n1 || true)"
     if [[ -n "$src" && -f "$src" ]]; then
-      sed -E -e 's#^SF:.*/_/#SF:#; t' -e 's#^SF:.*/bin/#SF:#' "$src" > "$dest"
+      # Rewrite SF: paths workspace-relative. DeterministicSourcePaths maps the
+      # ExecRoot to /_/, but coverlet often emits absolute .../execroot/<ws>/...
+      # paths; strip up to /execroot/<ws>/ as a fallback, then /bin/.
+      sed -E \
+        -e 's#^SF:.*/_/#SF:#; t' \
+        -e 's#^SF:.*/execroot/[^/]+/#SF:#; t' \
+        -e 's#^SF:.*/bin/#SF:#' "$src" > "$dest"
     else
       : > "$dest"
     fi
