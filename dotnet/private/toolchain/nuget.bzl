@@ -207,12 +207,17 @@ def _fetch_credentials_for_sources(ctx, sources, os):
     else:
         credential_helper = ctx.attr.credential_helper_linux
 
+    print("[nuget_fetch:auth] os=%s credential_helper=%r sources=%d" % (os, credential_helper, len(sources)))
+
     credentials = []
     for source in sources:
         url = source.get("value", "")
         key = source.get("key", "")
         if not url or not key:
+            print("[nuget_fetch:auth] skipping source with missing key/value: %r" % source)
             continue
+
+        print("[nuget_fetch:auth] fetching credentials for source key=%r url=%r" % (key, url))
 
         # Write request JSON to a temp file — ctx.execute has no stdin support
         req_file = "_cred_req_%s.json" % key.replace(" ", "_")
@@ -229,10 +234,13 @@ def _fetch_credentials_for_sources(ctx, sources, os):
             cmd = ["sh", "-c", "cat '{}' | '{}' get".format(req_path, credential_helper)]
         result = ctx.execute(cmd, quiet = True, working_directory = workspace_root)
         if result.return_code != 0 or not result.stdout.strip():
+            print(("[nuget_fetch:auth] credential helper failed for key=%r: return_code=%d " +
+                   "stdout_len=%d stderr=%r") % (key, result.return_code, len(result.stdout), result.stderr))
             continue
 
         response = json.decode(result.stdout.strip())
         headers = response.get("headers", {})
+        print("[nuget_fetch:auth] credential helper returned headers for key=%r: %r" % (key, headers.keys()))
 
         auth_value = None
         for header_key in headers:
@@ -243,21 +251,55 @@ def _fetch_credentials_for_sources(ctx, sources, os):
                 break
 
         if not auth_value:
+            print("[nuget_fetch:auth] no Authorization header returned for key=%r" % key)
             continue
 
+        scheme = auth_value.split(" ", 1)[0] if " " in auth_value else "(none)"
+        print("[nuget_fetch:auth] Authorization for key=%r scheme=%r value_len=%d value=%r" %
+              (key, scheme, len(auth_value), _mask_secret(auth_value)))
+
         if auth_value.lower().startswith("bearer "):
+            username = source.get("credential_username", "VstsToken")
+            token = auth_value[7:]
+            print("[nuget_fetch:auth] adding bearer credential for key=%r username=%r token_len=%d token=%r" %
+                  (key, username, len(token), _mask_secret(token)))
             credentials.append({
                 "name": key,
-                "username": source.get("credential_username", "VstsToken"),
-                "password": auth_value[7:],
+                "username": username,
+                "password": token,
             })
+        else:
+            print("[nuget_fetch:auth] Authorization scheme is not 'Bearer' for key=%r; not adding credential" % key)
 
+    print("[nuget_fetch:auth] resolved %d credential(s) for keys=%r" %
+          (len(credentials), [c["name"] for c in credentials]))
     return credentials
+
+def _mask_secret(secret):
+    """Show the first 10 characters of a secret and mask the remainder."""
+    if len(secret) <= 10:
+        return secret
+    return secret[:10] + "*" * (len(secret) - 10)
+
+def _print_generated_config(ctx, path, label, package_credentials = []):
+    """Read back a generated NuGet config and print its contents for debugging.
+
+    ClearTextPassword token values show the first 10 characters, the rest masked.
+    """
+    content = ctx.read(path)
+    for cred in package_credentials:
+        pwd = cred.get("password", "")
+        if pwd:
+            content = content.replace(pwd, _mask_secret(pwd))
+    print("[nuget_fetch:auth] generated %s at %s:\n%s" % (label, str(path), content))
 
 def _generate_nuget_configs(ctx, config, os):
     custom_packages = []
     for package in ctx.attr.package_sources:
         custom_packages.append(json.decode(package))
+
+    print("[nuget_fetch:auth] configured package_sources keys=%r" %
+          [p.get("key", "") for p in custom_packages])
 
     package_credentials = _fetch_credentials_for_sources(ctx, custom_packages, os)
 
@@ -276,6 +318,7 @@ def _generate_nuget_configs(ctx, config, os):
         ctx.attr._config_template,
         substitutions = substitutions,
     )
+    _print_generated_config(ctx, ctx.path(config.fetch_config), "NuGet.Fetch.Config", package_credentials)
 
     substitutions = prepare_nuget_config(
         config.packages_folder,
@@ -288,6 +331,7 @@ def _generate_nuget_configs(ctx, config, os):
         executable = False,
         substitutions = substitutions,
     )
+    _print_generated_config(ctx, ctx.path(NUGET_BUILD_CONFIG), NUGET_BUILD_CONFIG)
 
 nuget_fetch = repository_rule(
     implementation = _nuget_fetch_impl,
