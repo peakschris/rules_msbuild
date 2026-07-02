@@ -203,9 +203,12 @@ def _fetch_credentials_for_sources(ctx, sources, os):
     Returns a list of dicts with keys: name, username, password.
     """
     if os == "windows":
-        credential_helper = ctx.attr.credential_helper_windows
+        credential_helper = ctx.attr.credential_helper_windows or ctx.getenv("NUGET_CREDENTIAL_HELPER_WINDOWS")
     else:
-        credential_helper = ctx.attr.credential_helper_linux
+        credential_helper = ctx.attr.credential_helper_linux or ctx.getenv("NUGET_CREDENTIAL_HELPER_LINUX")
+
+    if not credential_helper:
+        return []
 
     credentials = []
     for source in sources:
@@ -228,7 +231,15 @@ def _fetch_credentials_for_sources(ctx, sources, os):
         else:
             cmd = ["sh", "-c", "cat '{}' | '{}' get".format(req_path, credential_helper)]
         result = ctx.execute(cmd, quiet = True, working_directory = workspace_root)
-        if result.return_code != 0 or not result.stdout.strip():
+        if result.return_code != 0:
+            # Surface a configured-but-failing helper rather than silently falling back to
+            # an unauthenticated restore (which then fails opaquely against a private feed).
+            # Commonly caused by --experimental_strict_repo_env scrubbing the helper's token
+            # env (e.g. HOME/USERPROFILE or a token var), making it exit non-zero.
+            print("nuget credential helper '{}' exited {} for {} (stderr: {}); continuing unauthenticated".format(
+                credential_helper, result.return_code, url, result.stderr.strip()))
+            continue
+        if not result.stdout.strip():
             continue
 
         response = json.decode(result.stdout.strip())
@@ -259,13 +270,27 @@ def _generate_nuget_configs(ctx, config, os):
     for package in ctx.attr.package_sources:
         custom_packages.append(json.decode(package))
 
-    package_credentials = _fetch_credentials_for_sources(ctx, custom_packages, os)
+    # The primary public source is nuget.org by default, but can be redirected to a
+    # mirror (e.g. an internal Artifactory NuGet virtual feed) via NUGET_SOURCE_URL.
+    # When redirected, the mirror may require auth, so it is also run through the
+    # credential-helper fetch below (nuget.org itself is anonymous).
+    source_url_override = ctx.getenv("NUGET_SOURCE_URL")
+    default_source = {
+        "key": "nuget.org",
+        "value": source_url_override or "https://api.nuget.org/v3/index.json",
+        "protocolVersion": "3",
+    }
+
+    sources_needing_creds = custom_packages
+    if source_url_override:
+        sources_needing_creds = sources_needing_creds + [default_source]
+    package_credentials = _fetch_credentials_for_sources(ctx, sources_needing_creds, os)
 
     substitutions = prepare_nuget_config(
         config.packages_folder,
         True,
         custom_packages + [
-            {"key": "nuget.org", "value": "https://api.nuget.org/v3/index.json", "protocolVersion": "3"},
+            default_source,
             {"key": "bazel", "value": config.bazel_packages.realpath},
             {"key": "rules_msbuild", "value": ctx.path(ctx.attr._embedded_packages).realpath.dirname},
         ],
