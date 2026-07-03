@@ -107,7 +107,7 @@ func coverageCollectArgs(info *LaunchInfo) []string {
 	}
 	adapterDir := filepath.Dir(info.GetRunfile(adapterDll))
 	return []string{
-		"--collect", "XPlat Code Coverage;Format=lcov",
+		"--collect", "XPlat Code Coverage;Format=lcov" + info.Data["coverlet_collect_extra"],
 		"--TestAdapterPath", adapterDir,
 		"--results-directory", filepath.Join(covDir, "_coverlet"),
 	}

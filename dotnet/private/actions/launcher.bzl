@@ -2,7 +2,7 @@ load("@bazel_skylib//lib:dicts.bzl", "dicts")
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//dotnet/private/util:util.bzl", "to_manifest_path")
 
-def make_launcher(ctx, dotnet, info, coverlet_collector_dll = None):
+def make_launcher(ctx, dotnet, info, coverlet_collector_dll = None, coverlet_collect_extra = ""):
     sdk = dotnet.sdk
 
     launcher = ctx.actions.declare_file(
@@ -39,6 +39,12 @@ def make_launcher(ctx, dotnet, info, coverlet_collector_dll = None):
         # Manifest path of coverlet.collector.dll (adapter dir resolved at runtime via
         # its parent). Empty unless built under `bazel coverage`.
         "coverlet_collector_dll": to_manifest_path(ctx, coverlet_collector_dll) if coverlet_collector_dll else "",
+        # Extra semicolon-prefixed coverlet '--collect' settings computed from the
+        # test's deps (e.g. ";ExcludeAssembliesWithoutSources=None;Include=[Sut]*").
+        # Needed on sandboxed builds (Linux CI) where deterministic PDB source paths
+        # map to a deleted build sandbox, so coverlet's default MissingAll guard would
+        # otherwise silently drop every module. Empty unless built under coverage.
+        "coverlet_collect_extra": coverlet_collect_extra,
     }
 
     is_test = getattr(dotnet.config, "is_test", False)
