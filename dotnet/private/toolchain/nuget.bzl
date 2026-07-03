@@ -164,9 +164,15 @@ def _configure_host_packages(ctx, dotnet, config):
     # it's possible that the packages folder doesn't exist yet, if it doesn't the symlink won't be functional
     # this mostly likely won't be the case in actual usage, but is definitely possible if the folder has been
     # cleaned, like on a fresh CI instance for example.
+    #
+    # The target MUST exist before we symlink to it: on Windows a symlink to a non-existent directory is
+    # broken, and NuGet then fails to create its global packages folder "through" the broken link with
+    # "Cannot create '...' because a file or directory with the same name already exists". cmd.exe's mkdir
+    # does not accept forward-slash paths, so pass it a backslash path (the `location` variable above was
+    # normalized to forward slashes for ctx.symlink/ctx.path, which is still what we want for the symlink).
     mkdir = None
     if dotnet.os == "windows":
-        mkdir = ["cmd", "/e:on", "/c", "mkdir " + location]
+        mkdir = ["cmd", "/e:on", "/c", "mkdir " + location.replace("/", "\\")]
     else:
         mkdir = ["mkdir", "-p", location]
 
