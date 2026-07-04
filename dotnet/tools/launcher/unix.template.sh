@@ -125,6 +125,7 @@ assembly_args+=("$@")
 dotnet_cmd="%dotnet_cmd%"
 coverlet_collector_dll="%coverlet_collector_dll%"
 coverlet_collect_extra="%coverlet_collect_extra%"
+coverage_src_prefixes="%coverage_src_prefixes%"
 if [[ $dotnet_cmd == "test" ]]; then
   assembly_args+=("--logger" "%dotnet_logger%;%log_path_arg_name%=${XML_OUTPUT_FILE:-"test.xml"}")
   # Under `bazel coverage`, turn on coverlet's XPlat collector and emit lcov.
@@ -175,10 +176,29 @@ if [[ -n "${COVERAGE_DIR:-}" ]]; then
       # Rewrite SF: paths workspace-relative. DeterministicSourcePaths maps the
       # ExecRoot to /_/, but coverlet often emits absolute .../execroot/<ws>/...
       # paths; strip up to /execroot/<ws>/ as a fallback, then /bin/.
+      #
+      # Then drop any lcov record whose SF: path is not under one of this test's
+      # first-party dep package dirs ($coverage_src_prefixes). NuGet packages with
+      # SourceLink PDBs (xunit.v3, Microsoft.Testing.Platform, Moq, ...) embed their
+      # own "src/<pkg>/..." source paths which coverlet's Include= does not reliably
+      # exclude, so without this filter thousands of dependency .cs files leak into
+      # the report. An empty prefix list disables the filter (keeps everything).
       sed -E \
         -e 's#^SF:.*/_/#SF:#; t' \
         -e 's#^SF:.*/execroot/[^/]+/#SF:#; t' \
-        -e 's#^SF:.*/bin/#SF:#' "$src" > "$dest"
+        -e 's#^SF:.*/bin/#SF:#' "$src" \
+      | awk -v prefixes="$coverage_src_prefixes" '
+          BEGIN { n = split(prefixes, P, ",") }
+          { rec = rec $0 "\n" }
+          /^SF:/ {
+            keep = (n == 0)
+            path = substr($0, 4)
+            for (i = 1; i <= n; i++) {
+              if (P[i] != "" && index(path, P[i] "/") == 1) { keep = 1; break }
+            }
+          }
+          /^end_of_record/ { if (keep) printf "%s", rec; rec = ""; keep = 0 }
+        ' > "$dest"
     else
       : > "$dest"
     fi

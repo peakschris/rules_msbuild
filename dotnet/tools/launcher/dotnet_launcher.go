@@ -215,7 +215,9 @@ func postProcessCoverage(info *LaunchInfo) {
 		_ = os.WriteFile(dest, []byte{}, 0644)
 		return
 	}
-	_ = os.WriteFile(dest, []byte(rewriteCoverageSF(string(data))), 0644)
+	lcov := rewriteCoverageSF(string(data))
+	lcov = filterCoverageSrc(lcov, info.Data["coverage_src_prefixes"])
+	_ = os.WriteFile(dest, []byte(lcov), 0644)
 }
 
 // rewriteCoverageSF rewrites every `SF:` path in an lcov file to be
@@ -253,6 +255,53 @@ func rewriteCoverageSF(lcov string) string {
 		lines[i] = "SF:" + p
 	}
 	return strings.Join(lines, "\n")
+}
+
+// filterCoverageSrc drops every lcov record whose SF: source file does not live
+// under one of the comma-separated first-party dep package dirs in prefixes
+// (e.g. "src/oci-extract/oci-extract,src/common/foo"). NuGet packages with
+// SourceLink PDBs (xunit.v3, Microsoft.Testing.Platform, Moq, ...) embed their own
+// "src/<pkg>/..." source paths that coverlet's Include= does not reliably exclude;
+// this keeps the report scoped to first-party code. An empty prefixes string
+// disables filtering (keeps everything).
+func filterCoverageSrc(lcov, prefixes string) string {
+	prefixes = strings.TrimSpace(prefixes)
+	if prefixes == "" {
+		return lcov
+	}
+	var prefs []string
+	for _, p := range strings.Split(prefixes, ",") {
+		if p != "" {
+			prefs = append(prefs, p+"/")
+		}
+	}
+	if len(prefs) == 0 {
+		return lcov
+	}
+
+	var out, rec strings.Builder
+	keep := false
+	for _, line := range strings.Split(lcov, "\n") {
+		rec.WriteString(line)
+		rec.WriteString("\n")
+		if strings.HasPrefix(line, "SF:") {
+			p := line[3:]
+			for _, pre := range prefs {
+				if strings.HasPrefix(p, pre) {
+					keep = true
+					break
+				}
+			}
+		}
+		if strings.HasPrefix(line, "end_of_record") {
+			if keep {
+				out.WriteString(rec.String())
+			}
+			rec.Reset()
+			keep = false
+		}
+	}
+	return out.String()
 }
 
 func LaunchDotnetPublish(args []string, info *LaunchInfo) {

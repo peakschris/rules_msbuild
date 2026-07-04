@@ -101,22 +101,32 @@ def _make_executable(ctx, is_test):
     coverlet_dll = None
     coverlet_files = []
     coverlet_collect_extra = ""
+    coverage_src_prefixes = ""
     if is_test and ctx.configuration.coverage_enabled:
         coverlet_dll, coverlet_files = _coverlet_adapter(ctx)
 
-        # Scope coverlet to the SUT assemblies (this test's direct .NET deps) and
-        # disable the missing-local-source guard. On sandboxed builds the build
-        # execroot is deleted before the test runs, so deterministic PDB source
-        # paths resolve to nothing and coverlet's default MissingAll behavior drops
-        # every module -> zero coverage. Include=[Sut]* keeps first-party only.
-        include_names = [
-            dep[DotnetLibraryInfo].restore.assembly_name
-            for dep in ctx.attr.deps
-            if DotnetLibraryInfo in dep
-        ]
+        # This test's direct first-party .NET deps (skip nuget-only deps).
+        dotnet_deps = [dep for dep in ctx.attr.deps if DotnetLibraryInfo in dep]
+
+        # Scope coverlet to the SUT assemblies and disable the missing-local-source
+        # guard. On sandboxed builds the build execroot is deleted before the test
+        # runs, so deterministic PDB source paths resolve to nothing and coverlet's
+        # default MissingAll behavior drops every module -> zero coverage.
+        # Include=[Sut]* keeps first-party only.
+        include_names = [dep[DotnetLibraryInfo].restore.assembly_name for dep in dotnet_deps]
         if include_names:
             includes = ",".join(["[%s]*" % n for n in include_names])
             coverlet_collect_extra = ";ExcludeAssembliesWithoutSources=None;Include=" + includes
+
+        # lcov source-path allow-list: the Bazel package dir of each first-party dep
+        # (e.g. "src/oci-extract/oci-extract"). coverlet.collector's inline Include=
+        # does NOT reliably exclude NuGet assemblies whose SourceLink PDBs embed their
+        # own "src/<pkg>/..." paths (xunit.v3, Microsoft.Testing.Platform, Moq, ...),
+        # so those leak into the report. The launcher post-filters the lcov to records
+        # whose SF: path lives under one of these dep dirs, matching the intended
+        # `--instrumentation_filter=^//src` scope.
+        prefixes = [dep.label.package for dep in dotnet_deps]
+        coverage_src_prefixes = ",".join([p for p in prefixes if p])
 
     launcher = make_launcher(
         ctx,
@@ -124,6 +134,7 @@ def _make_executable(ctx, is_test):
         info,
         coverlet_collector_dll = coverlet_dll,
         coverlet_collect_extra = coverlet_collect_extra,
+        coverage_src_prefixes = coverage_src_prefixes,
     )
 
     launcher_info = ctx.attr._launcher_template[DefaultInfo]

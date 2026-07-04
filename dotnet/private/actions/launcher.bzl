@@ -2,7 +2,7 @@ load("@bazel_skylib//lib:dicts.bzl", "dicts")
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//dotnet/private/util:util.bzl", "to_manifest_path")
 
-def make_launcher(ctx, dotnet, info, coverlet_collector_dll = None, coverlet_collect_extra = ""):
+def make_launcher(ctx, dotnet, info, coverlet_collector_dll = None, coverlet_collect_extra = "", coverage_src_prefixes = ""):
     sdk = dotnet.sdk
 
     launcher = ctx.actions.declare_file(
@@ -45,6 +45,11 @@ def make_launcher(ctx, dotnet, info, coverlet_collector_dll = None, coverlet_col
         # map to a deleted build sandbox, so coverlet's default MissingAll guard would
         # otherwise silently drop every module. Empty unless built under coverage.
         "coverlet_collect_extra": coverlet_collect_extra,
+        # Comma-separated Bazel package dirs of this test's first-party deps. The
+        # launcher keeps only lcov records whose SF: path lives under one of these,
+        # dropping NuGet SourceLink sources ("src/<pkg>/...") that leak past
+        # coverlet's Include=. Empty unless built under coverage.
+        "coverage_src_prefixes": coverage_src_prefixes,
     }
 
     is_test = getattr(dotnet.config, "is_test", False)
