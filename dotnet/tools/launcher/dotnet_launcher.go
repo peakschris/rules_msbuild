@@ -217,7 +217,30 @@ func postProcessCoverage(info *LaunchInfo) {
 	}
 	lcov := rewriteCoverageSF(string(data))
 	lcov = filterCoverageSrc(lcov, info.Data["coverage_src_prefixes"])
+	lcov = sanitizeCoverageFN(lcov)
 	_ = os.WriteFile(dest, []byte(lcov), 0644)
+}
+
+// sanitizeCoverageFN rewrites FN:/FNDA: lines so C# method signatures survive
+// Bazel's LcovParser, which splits these records on every comma and rejects any
+// with an unexpected field count -- dropping signatures whose parameter lists
+// contain commas (the "invalid FN line" warnings). lcov defines no comma
+// escaping, so keep the leading numeric field and replace commas in the trailing
+// signature with ";". FN and FNDA are transformed identically so their function
+// names still match; names and parameter lists stay readable.
+func sanitizeCoverageFN(lcov string) string {
+	lines := strings.Split(lcov, "\n")
+	for i, line := range lines {
+		if !strings.HasPrefix(line, "FN:") && !strings.HasPrefix(line, "FNDA:") {
+			continue
+		}
+		ci := strings.IndexByte(line, ',')
+		if ci < 0 {
+			continue
+		}
+		lines[i] = line[:ci+1] + strings.ReplaceAll(line[ci+1:], ",", ";")
+	}
+	return strings.Join(lines, "\n")
 }
 
 // rewriteCoverageSF rewrites every `SF:` path in an lcov file to be

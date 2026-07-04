@@ -189,6 +189,21 @@ if [[ -n "${COVERAGE_DIR:-}" ]]; then
         -e 's#^SF:.*/bin/#SF:#' "$src" \
       | awk -v prefixes="$coverage_src_prefixes" '
           BEGIN { n = split(prefixes, P, ",") }
+          # Bazel LcovParser splits FN/FNDA on every comma and rejects records
+          # with an unexpected field count, so C# signatures whose parameter
+          # lists contain commas are dropped ("invalid FN line" warnings). lcov
+          # has no comma escaping, so keep the leading numeric field and swap
+          # commas in the trailing signature for ";" (FN and FNDA transformed
+          # identically so their names still match; names/params stay readable).
+          /^FN:/ || /^FNDA:/ {
+            ci = index($0, ",")
+            if (ci > 0) {
+              head = substr($0, 1, ci)
+              name = substr($0, ci + 1)
+              gsub(/,/, ";", name)
+              $0 = head name
+            }
+          }
           { rec = rec $0 "\n" }
           /^SF:/ {
             keep = (n == 0)
