@@ -265,7 +265,7 @@ def _fetch_credentials_for_sources(ctx, sources, os):
         if auth_value.lower().startswith("bearer "):
             credentials.append({
                 "name": key,
-                "username": source.get("credential_username", "VstsToken"),
+                "username": ctx.getenv("NUGET_CREDENTIAL_USERNAME") or source.get("credential_username", "VstsToken"),
                 "password": auth_value[7:],
             })
 

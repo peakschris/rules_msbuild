@@ -76,7 +76,6 @@ nuget.fetch(
     dotnet_sdk_root = "@dotnet_sdk//:ROOT",
     packages = {
         "CommandLineParser/2.8.0": ["net10.0"],
-        "RulesMSBuild.Runfiles/": ["net10.0"],
         "FluentAssertions/5.10.3": [
             "net10.0",
         ],
