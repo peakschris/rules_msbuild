@@ -272,7 +272,7 @@ def _fetch_credentials_for_sources(ctx, sources, os):
               (key, scheme, len(auth_value), _mask_secret(auth_value)))
 
         if auth_value.lower().startswith("bearer "):
-            username = source.get("credential_username", "VstsToken") or os.getenv("NUGET_CREDENTIAL_USERNAME") or "VstsToken"
+            username = os.getenv("NUGET_CREDENTIAL_USERNAME") or source.get("credential_username", "VstsToken")
             token = auth_value[7:]
             print("[nuget_fetch:auth] adding bearer credential for key=%r username=%r token_len=%d token=%r" %
                   (key, username, len(token), _mask_secret(token)))
