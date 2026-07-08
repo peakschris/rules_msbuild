@@ -51,15 +51,27 @@ namespace NuGetParser
                 new XElement("TargetFramework", tfm)));
         }
 
+        // Runtime packs are NuGet package-type DotnetPlatform. They must be requested with
+        // <PackageDownload Include=".." Version="[x]"/> (exact, bracketed) -- as a plain
+        // <PackageReference> the restore rejects them with NU1213.
+        private static bool IsRuntimePack(string packageName)
+        {
+            return packageName.StartsWith("Microsoft.NETCore.App.Runtime.", System.StringComparison.OrdinalIgnoreCase)
+                || packageName.StartsWith("Microsoft.AspNetCore.App.Runtime.", System.StringComparison.OrdinalIgnoreCase)
+                || packageName.StartsWith("Microsoft.WindowsDesktop.App.Runtime.", System.StringComparison.OrdinalIgnoreCase)
+                || packageName.StartsWith("Microsoft.NETCore.App.Host.", System.StringComparison.OrdinalIgnoreCase);
+        }
+
         public void AddPackages(IEnumerable<(string name, string version)> packages)
         {
             _project.Add(new XElement("ItemGroup",
                 packages.Select(p =>
                 {
-                    var el = new XElement("PackageReference",
+                    var isRuntimePack = IsRuntimePack(p.name);
+                    var el = new XElement(isRuntimePack ? "PackageDownload" : "PackageReference",
                         new XAttribute("Include", p.name));
                     if (!string.IsNullOrEmpty(p.version))
-                        el.Add(new XAttribute("Version", p.version));
+                        el.Add(new XAttribute("Version", isRuntimePack ? $"[{p.version}]" : p.version));
                     return el;
                 })));
         }

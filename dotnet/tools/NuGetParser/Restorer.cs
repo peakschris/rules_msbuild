@@ -30,6 +30,15 @@ namespace NuGetParser
         public void Restore()
         {
             var (fetchProject, frameworks) = MakeRestoreProjects();
+
+            // Pre-create the global packages folder before restore. The traversal project restores
+            // its referenced framework projects in parallel, and they all share this folder. When it
+            // doesn't exist yet (e.g. a fresh CI checkout) the parallel restores race to create it and
+            // one loses with "Cannot create '...' because a file or directory with the same name
+            // already exists". Creating it up-front (idempotently) removes the race. Locally the folder
+            // usually already exists, which is why the failure only reproduces on clean CI machines.
+            Directory.CreateDirectory(_context.PackagesFolder);
+
             var dotnet = Process.Start(
                 new ProcessStartInfo(_dotnetPath,
                     $"restore {fetchProject}")
@@ -37,6 +46,15 @@ namespace NuGetParser
                     WorkingDirectory = _dir
                 });
             dotnet!.WaitForExit();
+            if (dotnet.ExitCode != 0)
+            {
+                // Fail loudly here instead of continuing into Parse(), which would otherwise throw a
+                // misleading DirectoryNotFoundException about a project.assets.json that restore never
+                // produced. The restore output above (inherited stdout/stderr) holds the real cause.
+                throw new CustomException(
+                    $"nuget restore failed with exit code {dotnet.ExitCode}; see restore output above for the cause");
+            }
+
             _context.Frameworks = frameworks.Values.ToList();
         }
 

@@ -127,7 +127,7 @@ def _nuget_fetch_impl(ctx):
         timeout = ctx.attr.timeout,
     )
     if result.return_code != 0:
-        fail("failed executing '%s':\nstdout: %s\nstderr: %s" % (" ".join(args), result.stdout, result.stderr))
+        fail("failed executing '%s':\nstdout: %s" % (" ".join(args), result.stdout))
 
 def _configure_host_packages(ctx, dotnet, config):
     if not ctx.attr.use_host:
@@ -145,7 +145,7 @@ def _configure_host_packages(ctx, dotnet, config):
 
     result = ctx.execute(args)
     if result.return_code != 0:
-        fail("failed to find global-packages folder with dotnet: %s; %s" % (result.stdout, result.stderr))
+        fail("failed to find global-packages folder with dotnet: %s" % (result.stdout))
 
     # example dotnet5 output: `global-packages: /Users/samh/.nuget/packages/`
     # example dotnet3.1 output: `info : global-packages: /Users/samh/.nuget/packages/`
@@ -164,9 +164,15 @@ def _configure_host_packages(ctx, dotnet, config):
     # it's possible that the packages folder doesn't exist yet, if it doesn't the symlink won't be functional
     # this mostly likely won't be the case in actual usage, but is definitely possible if the folder has been
     # cleaned, like on a fresh CI instance for example.
+    #
+    # The target MUST exist before we symlink to it: on Windows a symlink to a non-existent directory is
+    # broken, and NuGet then fails to create its global packages folder "through" the broken link with
+    # "Cannot create '...' because a file or directory with the same name already exists". cmd.exe's mkdir
+    # does not accept forward-slash paths, so pass it a backslash path (the `location` variable above was
+    # normalized to forward slashes for ctx.symlink/ctx.path, which is still what we want for the symlink).
     mkdir = None
     if dotnet.os == "windows":
-        mkdir = ["cmd", "/e:on", "/c", "mkdir " + location]
+        mkdir = ["cmd", "/e:on", "/c", "mkdir " + location.replace("/", "\\")]
     else:
         mkdir = ["mkdir", "-p", location]
 
@@ -203,11 +209,12 @@ def _fetch_credentials_for_sources(ctx, sources, os):
     Returns a list of dicts with keys: name, username, password.
     """
     if os == "windows":
-        credential_helper = ctx.attr.credential_helper_windows
+        credential_helper = ctx.attr.credential_helper_windows or ctx.getenv("NUGET_CREDENTIAL_HELPER_WINDOWS")
     else:
-        credential_helper = ctx.attr.credential_helper_linux
+        credential_helper = ctx.attr.credential_helper_linux or ctx.getenv("NUGET_CREDENTIAL_HELPER_LINUX")
 
-    print("[nuget_fetch:auth] os=%s credential_helper=%r sources=%d" % (os, credential_helper, len(sources)))
+    if not credential_helper:
+        return []
 
     credentials = []
     for source in sources:
@@ -233,9 +240,15 @@ def _fetch_credentials_for_sources(ctx, sources, os):
         else:
             cmd = ["sh", "-c", "cat '{}' | '{}' get".format(req_path, credential_helper)]
         result = ctx.execute(cmd, quiet = True, working_directory = workspace_root)
-        if result.return_code != 0 or not result.stdout.strip():
-            print(("[nuget_fetch:auth] credential helper failed for key=%r: return_code=%d " +
-                   "stdout_len=%d stderr=%r") % (key, result.return_code, len(result.stdout), result.stderr))
+        if result.return_code != 0:
+            # Surface a configured-but-failing helper rather than silently falling back to
+            # an unauthenticated restore (which then fails opaquely against a private feed).
+            # Commonly caused by --experimental_strict_repo_env scrubbing the helper's token
+            # env (e.g. HOME/USERPROFILE or a token var), making it exit non-zero.
+            print("nuget credential helper '{}' exited {} for {} (stderr: {}); continuing unauthenticated".format(
+                credential_helper, result.return_code, url, result.stderr.strip()))
+            continue
+        if not result.stdout.strip():
             continue
 
         response = json.decode(result.stdout.strip())
@@ -298,16 +311,27 @@ def _generate_nuget_configs(ctx, config, os):
     for package in ctx.attr.package_sources:
         custom_packages.append(json.decode(package))
 
-    print("[nuget_fetch:auth] configured package_sources keys=%r" %
-          [p.get("key", "") for p in custom_packages])
+    # The primary public source is nuget.org by default, but can be redirected to a
+    # mirror (e.g. an internal Artifactory NuGet virtual feed) via NUGET_SOURCE_URL.
+    # When redirected, the mirror may require auth, so it is also run through the
+    # credential-helper fetch below (nuget.org itself is anonymous).
+    source_url_override = ctx.getenv("NUGET_SOURCE_URL")
+    default_source = {
+        "key": "nuget.org",
+        "value": source_url_override or "https://api.nuget.org/v3/index.json",
+        "protocolVersion": "3",
+    }
 
-    package_credentials = _fetch_credentials_for_sources(ctx, custom_packages, os)
+    sources_needing_creds = custom_packages
+    if source_url_override:
+        sources_needing_creds = sources_needing_creds + [default_source]
+    package_credentials = _fetch_credentials_for_sources(ctx, sources_needing_creds, os)
 
     substitutions = prepare_nuget_config(
         config.packages_folder,
         True,
         custom_packages + [
-            {"key": "nuget.org", "value": "https://api.nuget.org/v3/index.json", "protocolVersion": "3"},
+            default_source,
             {"key": "bazel", "value": config.bazel_packages.realpath},
             {"key": "rules_msbuild", "value": ctx.path(ctx.attr._embedded_packages).realpath.dirname},
         ],
