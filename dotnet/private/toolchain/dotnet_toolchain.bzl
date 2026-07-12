@@ -4,14 +4,16 @@ load("//dotnet/private:providers.bzl", "DotnetLibraryInfo", "DotnetSdkInfo")
 def _sdk_make_variables(sdk):
     """Make-variables exported by both the dotnet toolchain and current_dotnet_toolchain.
 
-    BAZEL_DOTNET_SDKROOT points at the versioned SDK dir; DOTNET_BIN/DOTNET point at
-    the `dotnet`/`dotnet.exe` launcher itself (sdk.dotnet), so consumers such as
-    bazel_env can expose `dotnet` on PATH via `tools = {"dotnet": "$(DOTNET_BIN)"}`
-    (mirroring how the nodejs toolchain exposes `$(NODE_PATH)`). Both are made
-    absolute by prefixing the output_base (sdk.config.trim_path), matching the
-    existing SDKROOT convention.
+    BAZEL_DOTNET_SDKROOT points at the versioned SDK dir (absolute, prefixed with
+    the output_base). DOTNET_BIN/DOTNET point at the `dotnet`/`dotnet.exe` launcher
+    (sdk.dotnet) as an execroot-relative exec-path (File.path, e.g.
+    "external/<repo>/dotnet.exe") -- deliberately mirroring how the nodejs
+    toolchain defines NODE_PATH -- so bazel_env can expose `dotnet` on PATH via
+    `tools = {"dotnet": "$(DOTNET_BIN)"}`. It must NOT be made absolute: bazel_env
+    resolves the value as a runfiles rlocation (stripping the leading "external/"),
+    and an absolute path defeats that lookup.
     """
-    dotnet_bin = "/".join([sdk.config.trim_path, sdk.dotnet.path])
+    dotnet_bin = sdk.dotnet.path
     return {
         "BAZEL_DOTNET_SDKROOT": "/".join([sdk.config.trim_path, sdk.sdk_root.path]),
         "DOTNET_BIN": dotnet_bin,
@@ -75,9 +77,13 @@ def _current_dotnet_toolchain_impl(ctx):
     sdk = toolchain.sdk
     return [
         toolchain,
-        # DefaultInfo.files must be non-empty and reference a single repo for
-        # bazel_env to symlink it; the dotnet launcher (sdk.dotnet) is that file.
-        DefaultInfo(files = depset([sdk.dotnet])),
+        # DefaultInfo.files becomes the runfiles for `$(DOTNET_BIN)` under bazel_env
+        # (it uses this depset, not default_runfiles). Include the entire SDK tree
+        # (sdk.all_files), not just the launcher: dotnet.exe is a muxer that locates
+        # the runtime/SDK relative to its own on-disk location, so its siblings must
+        # be materialized alongside it. All files come from the single SDK repo, so
+        # bazel_env's single-repo constraint still holds.
+        DefaultInfo(files = depset([sdk.dotnet], transitive = [sdk.all_files])),
         # Re-export the SDK make-variables so a consumer that puts this target in
         # `toolchains = {...}` (bazel_env) can expand $(DOTNET_BIN)/$(DOTNET)/
         # $(BAZEL_DOTNET_SDKROOT). Mirrors @rules_rust//rust/toolchain:current_rust_toolchain.
