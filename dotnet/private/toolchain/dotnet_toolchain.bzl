@@ -78,12 +78,13 @@ def _current_dotnet_toolchain_impl(ctx):
     return [
         toolchain,
         # DefaultInfo.files becomes the runfiles for `$(DOTNET_BIN)` under bazel_env
-        # (it uses this depset, not default_runfiles). Include the entire SDK tree
-        # (sdk.all_files), not just the launcher: dotnet.exe is a muxer that locates
-        # the runtime/SDK relative to its own on-disk location, so its siblings must
-        # be materialized alongside it. All files come from the single SDK repo, so
-        # bazel_env's single-repo constraint still holds.
-        DefaultInfo(files = depset([sdk.dotnet], transitive = [sdk.all_files])),
+        # (it uses this depset, not default_runfiles). Include the whole SDK tree
+        # (sdk.runfiles -- "files required to run a command with the sdk"), not just
+        # the launcher: dotnet.exe is a muxer that locates the runtime/SDK relative
+        # to its own on-disk location, so its siblings must be materialized
+        # alongside it. All files come from the single SDK repo, so bazel_env's
+        # single-repo constraint still holds.
+        DefaultInfo(files = depset([sdk.dotnet], transitive = [sdk.runfiles])),
         # Re-export the SDK make-variables so a consumer that puts this target in
         # `toolchains = {...}` (bazel_env) can expand $(DOTNET_BIN)/$(DOTNET)/
         # $(BAZEL_DOTNET_SDKROOT). Mirrors @rules_rust//rust/toolchain:current_rust_toolchain.
