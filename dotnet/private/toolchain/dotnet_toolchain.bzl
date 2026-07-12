@@ -1,6 +1,23 @@
 load("//dotnet/private:platforms.bzl", "PLATFORMS")
 load("//dotnet/private:providers.bzl", "DotnetLibraryInfo", "DotnetSdkInfo")
 
+def _sdk_make_variables(sdk):
+    """Make-variables exported by both the dotnet toolchain and current_dotnet_toolchain.
+
+    BAZEL_DOTNET_SDKROOT points at the versioned SDK dir; DOTNET_BIN/DOTNET point at
+    the `dotnet`/`dotnet.exe` launcher itself (sdk.dotnet), so consumers such as
+    bazel_env can expose `dotnet` on PATH via `tools = {"dotnet": "$(DOTNET_BIN)"}`
+    (mirroring how the nodejs toolchain exposes `$(NODE_PATH)`). Both are made
+    absolute by prefixing the output_base (sdk.config.trim_path), matching the
+    existing SDKROOT convention.
+    """
+    dotnet_bin = "/".join([sdk.config.trim_path, sdk.dotnet.path])
+    return {
+        "BAZEL_DOTNET_SDKROOT": "/".join([sdk.config.trim_path, sdk.sdk_root.path]),
+        "DOTNET_BIN": dotnet_bin,
+        "DOTNET": dotnet_bin,
+    }
+
 def _dotnet_toolchain_impl(ctx):
     sdk = ctx.attr.sdk[DotnetSdkInfo]
     cross_compile = ctx.attr.dotnetos != sdk.dotnetos or ctx.attr.dotnetarch != sdk.dotnetarch
@@ -25,9 +42,7 @@ def _dotnet_toolchain_impl(ctx):
                 ),
             ),
         ),
-        platform_common.TemplateVariableInfo({
-            "BAZEL_DOTNET_SDKROOT": "/".join([sdk.config.trim_path, sdk.sdk_root.path]),
-        }),
+        platform_common.TemplateVariableInfo(_sdk_make_variables(sdk)),
     ]
 
 dotnet_toolchain = rule(
@@ -53,6 +68,32 @@ dotnet_toolchain = rule(
         ),
     },
     doc = "Defines a Dotnet toolchain based on an SDK",
+)
+
+def _current_dotnet_toolchain_impl(ctx):
+    toolchain = ctx.toolchains["@rules_msbuild//dotnet:toolchain"]
+    sdk = toolchain.sdk
+    return [
+        toolchain,
+        # DefaultInfo.files must be non-empty and reference a single repo for
+        # bazel_env to symlink it; the dotnet launcher (sdk.dotnet) is that file.
+        DefaultInfo(files = depset([sdk.dotnet])),
+        # Re-export the SDK make-variables so a consumer that puts this target in
+        # `toolchains = {...}` (bazel_env) can expand $(DOTNET_BIN)/$(DOTNET)/
+        # $(BAZEL_DOTNET_SDKROOT). Mirrors @rules_rust//rust/toolchain:current_rust_toolchain.
+        platform_common.TemplateVariableInfo(_sdk_make_variables(sdk)),
+    ]
+
+current_dotnet_toolchain = rule(
+    _current_dotnet_toolchain_impl,
+    toolchains = ["@rules_msbuild//dotnet:toolchain"],
+    doc = (
+        "Exposes the resolved dotnet toolchain as a normal target: its DefaultInfo " +
+        "carries the `dotnet` launcher and it provides the DOTNET_BIN/DOTNET/" +
+        "BAZEL_DOTNET_SDKROOT make-variables. Consume it from bazel_env " +
+        "(toolchains = {\"dotnet\": \"@rules_msbuild//dotnet:current_dotnet_toolchain\"}) " +
+        "to put `dotnet` on PATH, the way rules_rust's current_rust_toolchain does for rust."
+    ),
 )
 
 def declare_toolchains(host, sdk, builder):
