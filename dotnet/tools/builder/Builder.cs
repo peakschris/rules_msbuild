@@ -490,7 +490,14 @@ namespace RulesMSBuild.Tools.Builder
                 foreach (var directory in Directory.EnumerateDirectories(path))
                     Fix(directory);
                 foreach (var ideFileName in Directory.EnumerateFiles(path))
+                {
+                    // Skip NuGet's UUID-named ".tmp" atomic-write intermediaries: they are not
+                    // real restore outputs (and are often left 0-byte when a restore runs in a
+                    // sandbox), so there are no absolute paths to rewrite in them.
+                    if (Path.GetExtension(ideFileName).Equals(".tmp", StringComparison.OrdinalIgnoreCase))
+                        continue;
                     fixer!.Fix(ideFileName);
+                }
             }
         }
 

@@ -36,6 +36,11 @@ namespace RulesMSBuild.Tools.Builder
             var bazelFilePath = originalFilePath;
 
             var contents = _files.GetContents(originalFilePath).AsSpan();
+            // An empty file (e.g. a stray NuGet UUID-named ".tmp" atomic-write intermediary that
+            // survived in the restore output dir) has no absolute paths to rewrite, so there is
+            // nothing to fix; return before indexing [0], which would throw on a zero-length span.
+            if (contents.IsEmpty)
+                return;
             var isJson = contents[0] == '{';
             var needsEscaping = isJson && Path.DirectorySeparatorChar == '\\';
             var thisTarget = needsEscaping ? _escapedTarget : _target;
