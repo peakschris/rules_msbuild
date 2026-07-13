@@ -47,7 +47,11 @@ namespace NuGetParser
                 return "missing version";
             }
 
-            if (version.GetInt32() != 3)
+            // project.assets.json bumped from format 3 (net<=9 SDKs) to 4 (net10 SDKs,
+            // e.g. 10.0.301). The fields this parser reads (targets/libraries/dependencies/
+            // frameworkReferences) are unchanged across these versions, so accept 3+ to stay
+            // independent of the dotnet SDK version rather than hard-coding one format.
+            if (version.GetInt32() < 3)
             {
                 return $"Unsupported project.assets.json version {version.GetInt32()}";
             }
