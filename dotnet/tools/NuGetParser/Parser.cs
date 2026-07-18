@@ -57,7 +57,14 @@ namespace NuGetParser
             }
 
             var packages = new Dictionary<string, PackageVersion>(StringComparer.OrdinalIgnoreCase);
-            _assetsReader.Init(restoreGroup.ObjDirectory, framework.Tfm);
+            var initError = _assetsReader.Init(restoreGroup.ObjDirectory, framework.Tfm);
+            if (initError != null)
+            {
+                throw new Exception(
+                    $"Failed to parse {Path.Combine(restoreGroup.ObjDirectory, "project.assets.json")} " +
+                    $"for {framework.Tfm}: {initError}");
+            }
+
             foreach (var packageVersion in _assetsReader.GetPackages())
             {
                 var version = packageVersion;

@@ -2,7 +2,7 @@
   <PropertyGroup>
     <UseAppHost>false</UseAppHost>
     <TargetFramework>net10.0</TargetFramework>
-    <MSBuildPackageVersion>18.0.13</MSBuildPackageVersion>
+    <MSBuildPackageVersion>18.6.3</MSBuildPackageVersion>
     <LangVersion>9.0</LangVersion>
     <GenerateProgramFile Condition="$(BazelBuild) != ''">false</GenerateProgramFile>
   </PropertyGroup>
@@ -23,11 +23,11 @@
     <PackageReference Include="SamHowes.Microsoft.Build.Framework" Version="$(MSBuildPackageVersion)"/>
     <PackageReference Include="Microsoft.Build.Tasks.Core" Version="$(MSBuildPackageVersion)"/>
     <!--  Make sure msbuild only copies this exact dll and no dependencies.  -->
-    <None Include="$(ExecRoot)/external//+nuget+nuget/packages/samhowes.microsoft.build/18.0.13a/lib/net10.0/Microsoft.Build.dll" Condition="'$(TargetFramework)' == 'net10.0'">
+    <None Include="$(ExecRoot)/external//+nuget+nuget/packages/samhowes.microsoft.build/18.6.3a/lib/net10.0/Microsoft.Build.dll" Condition="'$(TargetFramework)' == 'net10.0'">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </None>
-    <None Include="$(ExecRoot)/external//+nuget+nuget/packages/samhowes.microsoft.build.framework/18.0.13a/lib/net10.0/Microsoft.Build.Framework.dll" Condition="'$(TargetFramework)' == 'net10.0'">
+    <None Include="$(ExecRoot)/external//+nuget+nuget/packages/samhowes.microsoft.build.framework/18.6.3a/lib/net10.0/Microsoft.Build.Framework.dll" Condition="'$(TargetFramework)' == 'net10.0'">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </None>
