@@ -47,13 +47,15 @@ namespace NuGetParser
                 return "missing version";
             }
 
-            // project.assets.json bumped from format 3 (net<=9 SDKs) to 4 (net10 SDKs,
-            // e.g. 10.0.301). The fields this parser reads (targets/libraries/dependencies/
-            // frameworkReferences) are unchanged across these versions, so accept 3+ to stay
-            // independent of the dotnet SDK version rather than hard-coding one format.
-            if (version.GetInt32() < 3)
+            // v3 has been stable for years; the .NET 10 SDK emits v4, which is a superset
+            // for the sections we read (targets, libraries, project.frameworks.<tfm>).
+            const int minSupportedVersion = 3;
+            const int maxSupportedVersion = 4;
+            var assetsVersion = version.GetInt32();
+            if (assetsVersion < minSupportedVersion || assetsVersion > maxSupportedVersion)
             {
-                return $"Unsupported project.assets.json version {version.GetInt32()}";
+                return $"Unsupported project.assets.json version {assetsVersion} " +
+                       $"(supported: {minSupportedVersion}-{maxSupportedVersion})";
             }
 
             _frameworkInfo = _assets;

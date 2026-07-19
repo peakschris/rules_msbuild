@@ -137,6 +137,24 @@ namespace BuilderTests
         }
 
 
+        [Fact]
+        public void EmptyRestoreFile_IsMirroredToIde_AndBazelCopyIsLeftUntouched()
+        {
+            // net10 restore can emit zero-byte files. There are no absolute paths to rewrite,
+            // so the bazel copy (the original file on disk) must be left untouched and only the
+            // empty IDE mirror created.
+            _contents = "";
+
+            _fixer.Fix(Path.Combine(_context.MSBuild.BaseIntermediateOutputPath, "foo"));
+
+            // Only the IDE mirror is created; the bazel/original copy is never rewritten.
+            // (The non-empty path calls Create twice - once per output.)
+            _files.Verify(f => f.Create(It.IsAny<string>()), Times.Once);
+
+            _ideOutStream.Seek(0, SeekOrigin.Begin);
+            new StreamReader(_ideOutStream).ReadToEnd().Should().BeEmpty();
+        }
+
         private void Fix()
         {
             _fixer.Fix(Path.Combine(_context.MSBuild.BaseIntermediateOutputPath, "foo"));

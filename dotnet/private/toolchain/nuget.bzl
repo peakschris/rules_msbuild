@@ -191,12 +191,12 @@ def _copy_parser(ctx, config):
 
 def _fetch_custom_packages(ctx, config):
     ctx.download(
-        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.0.13a/SamHowes.Microsoft.Build.18.0.13.nupkg",
-        output = config.bazel_packages.get_child("SamHowes.Microsoft.Build.18.0.13.nupkg"),
+        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.6.3/SamHowes.Microsoft.Build.18.6.3.nupkg",
+        output = config.bazel_packages.get_child("SamHowes.Microsoft.Build.18.6.3.nupkg"),
     )
     ctx.download(
-        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.0.13a/SamHowes.Microsoft.Build.Framework.18.0.13.nupkg",
-        output = config.bazel_packages.get_child("SamHowes.Microsoft.Build.Framework.18.0.13.nupkg"),
+        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.6.3/SamHowes.Microsoft.Build.Framework.18.6.3.nupkg",
+        output = config.bazel_packages.get_child("SamHowes.Microsoft.Build.Framework.18.6.3.nupkg"),
     )
 
 def _fetch_credentials_for_sources(ctx, sources, os):

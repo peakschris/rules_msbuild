@@ -36,11 +36,19 @@ namespace RulesMSBuild.Tools.Builder
             var bazelFilePath = originalFilePath;
 
             var contents = _files.GetContents(originalFilePath).AsSpan();
-            // An empty file (e.g. a stray NuGet UUID-named ".tmp" atomic-write intermediary that
-            // survived in the restore output dir) has no absolute paths to rewrite, so there is
-            // nothing to fix; return before indexing [0], which would throw on a zero-length span.
+
+            // The net10 restore can emit zero-byte files into the output tree. An empty file has
+            // no absolute target paths to rewrite, so there is nothing to fix in the bazel copy:
+            // FixRestoreOutputs enumerates files that already exist on disk, so the original
+            // (== bazelFilePath) is already the correct empty file and we deliberately leave it
+            // untouched. We still create the IDE mirror so both trees stay in sync.
             if (contents.IsEmpty)
+            {
+                _files.CreateDirectory(Path.GetDirectoryName(ideFilePath)!);
+                _files.Create(ideFilePath).Dispose();
                 return;
+            }
+
             var isJson = contents[0] == '{';
             var needsEscaping = isJson && Path.DirectorySeparatorChar == '\\';
             var thisTarget = needsEscaping ? _escapedTarget : _target;
