@@ -83,6 +83,13 @@ namespace RulesMSBuild.Tools.Builder
             ProjectInstance? project = null;
             try
             {
+                // Hygiene: remove any obj/ and bin/ that have leaked into the REAL source tree (typically
+                // from a direct `dotnet build`/`dotnet test` outside Bazel). Bazel's own intermediates live
+                // under bazel-out; these source-tree copies are stray clutter that can confuse tooling and,
+                // because Windows has no Bazel sandbox, risk being picked up by an in-place action. Clean
+                // before the action so the build starts from a tidy source tree.
+                CleanSourceTreeArtifacts();
+
                 project = BeginBuild();
                 if (project == null) return -1;
 
@@ -127,6 +134,55 @@ namespace RulesMSBuild.Tools.Builder
             finally
             {
                 _buildManager.Dispose();
+                // Clean again after the action so we never leave obj/bin behind in the source tree,
+                // regardless of success or failure. The real outputs live under bazel-out and are untouched.
+                CleanSourceTreeArtifacts();
+            }
+        }
+
+        /// <summary>
+        /// Deletes obj/ and bin/ from the project's REAL source directory. These are stray leaks (typically
+        /// from a direct `dotnet` invocation) -- the Bazel-declared intermediate/output TreeArtifacts live under
+        /// bazel-out (<see cref="BazelContext.OutputDir"/>), never in the source tree, so this never removes a
+        /// declared output. Guarded to no-op if the project directory is under bazel-out (generated projects).
+        /// </summary>
+        private void CleanSourceTreeArtifacts()
+        {
+            try
+            {
+                var projectDir = _context.ProjectDirectory;
+                if (string.IsNullOrEmpty(projectDir) || !Directory.Exists(projectDir))
+                    return;
+
+                // Never touch anything under bazel-out: those obj/bin ARE declared Bazel outputs.
+                var binDir = _context.Bazel.BinDir;
+                if (!string.IsNullOrEmpty(binDir) &&
+                    projectDir.StartsWith(binDir, StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                foreach (var name in new[] { "obj", "bin" })
+                {
+                    var dir = Path.Combine(projectDir, name);
+                    if (!Directory.Exists(dir))
+                        continue;
+                    try
+                    {
+                        // Bazel marks outputs read-only; clear the attribute before deleting.
+                        foreach (var f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
+                            File.SetAttributes(f, FileAttributes.Normal);
+                        Directory.Delete(dir, true);
+                        Debug($"removed source-tree {name}/ at {dir}");
+                    }
+                    catch (Exception ex)
+                    {
+                        // Best-effort: never break an otherwise-good build over cleanup.
+                        Debug($"could not remove source-tree {name}/ at {dir}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug($"CleanSourceTreeArtifacts failed: {ex.Message}");
             }
         }
 
