@@ -90,6 +90,16 @@ namespace RulesMSBuild.Tools.Builder
                 // before the action so the build starts from a tidy source tree.
                 CleanSourceTreeArtifacts();
 
+                // Hermeticity: Windows has no Bazel action sandbox, and Bazel does not clear a declared
+                // output directory (TreeArtifact) before re-running an action. The previous build's
+                // bazel-out obj/ therefore persists across runs, so MSBuild's CoreCompile up-to-date check
+                // can find a stale IntermediateAssembly and skip recompilation -- emitting a stale DLL that
+                // Bazel then caches. Delete obj/ before a build so a source change always forces a correct
+                // recompile. Only obj/ is removed; the restore outputs (project.assets.json, *.nuget.g.props)
+                // live under a sibling restore/ directory and are inputs to this action, so they are intact.
+                if (_action == "build")
+                    CleanIntermediateOutput();
+
                 project = BeginBuild();
                 if (project == null) return -1;
 
@@ -183,6 +193,35 @@ namespace RulesMSBuild.Tools.Builder
             catch (Exception ex)
             {
                 Debug($"CleanSourceTreeArtifacts failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Removes the intermediate obj/ directory (<see cref="MSBuildContext.IntermediateOutputPath"/>,
+        /// i.e. bazel-out/.../bin/&lt;package&gt;/obj) before a build action. Because Windows has no Bazel sandbox
+        /// and Bazel does not clear a declared TreeArtifact between runs, a stale obj/ left by a previous action
+        /// makes MSBuild's incremental up-to-date check skip CoreCompile, producing a stale assembly that then
+        /// gets cached. Deleting obj/ forces a clean compile. The restore outputs live under a separate sibling
+        /// restore/ directory (BaseIntermediateOutputPath) and are inputs to this action, so they are never
+        /// touched here. Best-effort: a deletion failure logs and lets the build proceed (pre-fix behavior).
+        /// </summary>
+        private void CleanIntermediateOutput()
+        {
+            var objDir = _context.MSBuild.IntermediateOutputPath;
+            try
+            {
+                if (string.IsNullOrEmpty(objDir) || !Directory.Exists(objDir))
+                    return;
+
+                // Bazel marks prior outputs read-only; clear the attribute before deleting.
+                foreach (var f in Directory.EnumerateFiles(objDir, "*", SearchOption.AllDirectories))
+                    File.SetAttributes(f, FileAttributes.Normal);
+                Directory.Delete(objDir, true);
+                Debug($"removed stale intermediate obj/ at {objDir}");
+            }
+            catch (Exception ex)
+            {
+                Debug($"could not remove intermediate obj/ at {objDir}: {ex.Message}");
             }
         }
 
