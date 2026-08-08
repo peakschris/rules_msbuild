@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace RulesMSBuild.Tools.Builder.MSBuild
 {
@@ -114,6 +115,22 @@ namespace RulesMSBuild.Tools.Builder.MSBuild
             }
 
             BuildEnvironment["NoWarn"] = noWarn;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                var absoluteSdkRoot = Path.GetFullPath(Path.Combine(bazel.OutputBase, command.sdk_root));
+                foreach (var key in new[] { "APPDATA", "LOCALAPPDATA", "USERPROFILE" })
+                {
+                    var val = Environment.GetEnvironmentVariable(key);
+                    if (!string.IsNullOrEmpty(val) && !Path.IsPathRooted(val))
+                    {
+                        // Replace the relative SDK root with the absolute one so that every
+                        // subprocess, regardless of its own CWD, resolves to the same location.
+                        BuildEnvironment[key] = absoluteSdkRoot;
+                    }
+                }
+            }
+
         }
 
         public string PublishDir { get; set; }

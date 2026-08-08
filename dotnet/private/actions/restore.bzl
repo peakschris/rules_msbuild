@@ -9,12 +9,17 @@ def restore(ctx, dotnet):
     outputs, assets_json = _declare_restore_outputs(ctx)
     cache = declare_caches(ctx, "restore")
 
-    files, caches = _process_deps(dotnet, ctx)
+    files, caches, declared_nuget_packages = _process_deps(dotnet, ctx)
     cache_manifest = write_cache_manifest(ctx, cache, cache_set(transitive = caches))
     directory_info = ctx.attr.msbuild_directory[MSBuildDirectoryInfo]
 
+    # Write the list of explicitly declared NuGet package names to a file so the builder can
+    # validate that every <PackageReference> in the project is covered by a Bazel dep.
+    declared_packages_file = ctx.actions.declare_file(ctx.attr.name + ".declared_packages.json")
+    ctx.actions.write(declared_packages_file, json.encode(declared_nuget_packages))
+
     inputs = depset(
-        direct = [ctx.file.project_file, cache_manifest],
+        direct = [ctx.file.project_file, cache_manifest, declared_packages_file],
         transitive = files + [directory_info.files],
     )
 
@@ -34,6 +39,7 @@ def restore(ctx, dotnet):
             "--package_version",
             ctx.attr.package_version,
         ])
+    args.add_all(["--declared_packages_file", declared_packages_file])
 
     ctx.actions.run(
         mnemonic = "NuGetRestore",
@@ -61,6 +67,7 @@ def _process_deps(dotnet, ctx):
 
     files = []
     caches = []
+    declared_nuget_packages = []
     for dep in getattr(dotnet.config, "tfm_deps", []):
         get_nuget_files(dep, tfm, files)
 
@@ -75,10 +82,11 @@ def _process_deps(dotnet, ctx):
             caches.append(info.caches)
         elif NuGetPackageInfo in dep:
             get_nuget_files(dep, tfm, files)
+            declared_nuget_packages.append(dep[NuGetPackageInfo].name)
         else:
             fail("Unkown dependency type: {}".format(dep))
 
-    return files, caches
+    return files, caches, declared_nuget_packages
 
 def _get_assembly_name(ctx, directory_info):
     if directory_info == None:

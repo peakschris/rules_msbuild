@@ -73,6 +73,8 @@ namespace RulesMSBuild.Tools.Builder
         [Option("runfiles_manifest", Required = false)]
         public string RunfilesManifest { get; set; }
 
+        [Option("declared_packages_file", Required = false)]
+        public string DeclaredPackagesFile { get; set; }
 
         [Option("directory")] public IEnumerable<string> DirectorySrcs { get; set; }
         public string? ExecRoot { get; set; }
