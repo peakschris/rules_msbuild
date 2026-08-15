@@ -25,6 +25,12 @@ namespace RulesMSBuild.Tools.Builder
             Console.WriteLine("[Debug] " + message);
         }
 
+        public static void Warning(string s)
+        {
+            Console.Error.WriteLine(s);
+            Console.Error.Flush();
+        }
+
         public static void Error(string s)
         {
             Console.Error.WriteLine(s);

@@ -44,6 +44,17 @@ namespace RulesMSBuild.Tests.Tools
             return pathMapper;
         }
 
+        // In-memory / --sandbox_base sandbox: exec_root lives on a separate root from output_base
+        // (e.g. exec_root under /dev/shm while the SDK tools stay under the real output_base).
+        private static PathMapper InitDisjoint(string input)
+        {
+            PathMapper.ResetInstance();
+            var pathMapper = input.Contains('\\')
+                ? new PathMapper(@"C:\o", @"D:\shm\e\f")
+                : new PathMapper("/o", "/shm/e/f");
+            return pathMapper;
+        }
+
         [Theory]
         [PathData(@"C:\o\e\f\file.txt", @"$exec_root\f\file.txt")]
         [PathData("/o/e/f/file.txt", @"$exec_root/f/file.txt")]
@@ -98,6 +109,24 @@ namespace RulesMSBuild.Tests.Tools
             var actual = pathMapper.FromBazel(input);
 
             actual.Should().Be(expected);
+        }
+
+        // With an in-memory / --sandbox_base sandbox, exec_root is NOT nested under output_base. Both roots must
+        // still map independently, and paths must round-trip.
+        [Theory]
+        [PathData(@"D:\shm\e\f\file.txt", @"$exec_root\f\file.txt")]
+        [PathData(@"/shm/e/f/file.txt", @"$exec_root/f/file.txt")]
+        [PathData(@"C:\o\file.txt", @"$output_base\file.txt")]
+        [PathData(@"/o/file.txt", @"$output_base/file.txt")]
+        public void ToBazel_Works_WhenExecRootDisjointFromOutputBase(string input, string expected)
+        {
+            var pathMapper = InitDisjoint(input);
+
+            var stored = pathMapper.ToBazel(input);
+            stored.Should().Be(expected);
+
+            var retrieved = pathMapper.FromBazel(stored);
+            retrieved.Should().Be(input);
         }
     }
 }
