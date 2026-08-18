@@ -38,8 +38,6 @@ namespace RulesMSBuild.Tools.Builder
         {
             if (_instance != null)
                 throw new InvalidOperationException("There can only be one PathMapper instantiated at a time.");
-            if (!execRoot.StartsWith(outputBase, StringComparison.OrdinalIgnoreCase))
-                throw new ArgumentException($"Unexpected output_base<>exec_root combination: {outputBase}<>{execRoot}");
             _outputBase = outputBase;
             // bazel invokes us at $output_base/sandbox/darwin-sandbox/17/execroot/<workspace_name>
             // this code needs the actual folder named "execroot" not the folder that the bazel docs call "execRoot"
@@ -50,10 +48,15 @@ namespace RulesMSBuild.Tools.Builder
             _externalPrefix = hostWorkspace + "/external";
             SetInstance(this);
 
-            var execRootSegment = _execRoot[(outputBase.Length)..];
-
+            // exec_root and output_base are two independent roots: exec_root is the sandbox working tree
+            // (project sources + bazel-out), while output_base holds the persistent SDK tools referenced via
+            // absolute paths. In the default sandbox exec_root is nested under output_base
+            // ($output_base/sandbox/.../execroot/<workspace>), but with an in-memory / --sandbox_base sandbox
+            // (e.g. /dev/shm) exec_root lives on a completely separate path. We therefore match the two roots
+            // independently rather than assuming nesting. exec_root is tried first so that in the nested case
+            // its more-specific prefix wins over output_base.
             _toBazelRegex = new Regex(
-                @$"({Regex.Escape(outputBase)})({Regex.Escape(execRootSegment)})?(/|\\)([^\\/]+(/|\\))?",
+                @$"(?:({Regex.Escape(_execRoot)})|({Regex.Escape(outputBase)}))(/|\\)([^\\/]+(/|\\))?",
                 RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline);
 
             _fromBazelRegex = new Regex($"({Regex.Escape(OutputBase)})|({Regex.Escape(ExecRoot)})",
@@ -63,7 +66,7 @@ namespace RulesMSBuild.Tools.Builder
         public virtual string ToBazel(string path) => _toBazelRegex.Replace(path,
             (match) =>
             {
-                return (match.Groups[2].Success ? ExecRoot : OutputBase) + match.Groups[3].Value +
+                return (match.Groups[1].Success ? ExecRoot : OutputBase) + match.Groups[3].Value +
                        match.Groups[4].Value;
             });
 

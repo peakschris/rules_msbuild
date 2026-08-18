@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.Build.Construction;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Framework;
@@ -265,6 +266,11 @@ namespace RulesMSBuild.Tools.Builder
             if (!ValidateTfm(project))
                 return null;
 
+            // Advisory: warn once (on restore, the first action that reads the source .csproj) if the project
+            // sets any property that rules_msbuild manages and will override, so the mismatch isn't silent.
+            if (_action == "restore")
+                WarnOverriddenProperties(pc);
+
             _buildParameters = new BuildParameters(pc)
             {
                 EnableNodeReuse = false,
@@ -471,6 +477,58 @@ namespace RulesMSBuild.Tools.Builder
             {
                 var rel = Rel(src, file);
                 File.Copy(file, Path.Combine(dest, rel));
+            }
+        }
+
+        /// <summary>
+        /// Emits a warning for each property the source .csproj sets that rules_msbuild manages and will override.
+        /// Two override mechanisms are covered: MSBuild global properties (set on the ProjectCollection, they always
+        /// win over project-level &lt;PropertyGroup&gt; values) and the output-path properties forced by
+        /// Directory.Bazel.props. Only property elements declared directly in the entry .csproj are inspected
+        /// (imports are ignored). Best-effort: never fails the build.
+        /// </summary>
+        private void WarnOverriddenProperties(ProjectCollection pc)
+        {
+            // Output-path properties rules_msbuild pins via dotnet/private/msbuild/Directory.Bazel.props so that
+            // outputs land in Bazel's tree. Keep in sync with that file.
+            var managed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "OutputPath",
+                "BaseIntermediateOutputPath",
+                "IntermediateOutputPath",
+                "PackageOutputPath",
+                "NuspecOutputPath",
+            };
+            // Global properties always override project-level values; pull them straight from the context so this
+            // stays correct as the set evolves.
+            foreach (var key in _context.MSBuild.GlobalProperties.Keys)
+                managed.Add(key);
+
+            ProjectRootElement? root;
+            try
+            {
+                // Open just the entry .csproj (not its imports) so we only flag what the user wrote themselves.
+                root = ProjectRootElement.Open(_context.ProjectFile, pc);
+            }
+            catch (Exception ex)
+            {
+                Debug($"WarnOverriddenProperties: could not open {_context.ProjectFile}: {ex.Message}");
+                return;
+            }
+
+            if (root == null) return;
+
+            var projectPath = _deps.PathMapper.ToBazel(_context.ProjectFile);
+            var warned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var prop in root.Properties)
+            {
+                if (!managed.Contains(prop.Name) || !warned.Add(prop.Name))
+                    continue;
+
+                BazelLogger.Warning(
+                    $"{projectPath}({prop.Location.Line},{prop.Location.Column}): warning BZ0002: " +
+                    $"Property '{prop.Name}' is set in the project file but is managed by rules_msbuild and " +
+                    $"will be overridden. Remove it from the project file to silence this warning.");
             }
         }
 
