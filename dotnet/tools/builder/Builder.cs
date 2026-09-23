@@ -356,7 +356,16 @@ namespace RulesMSBuild.Tools.Builder
 
             if (_action == "publish")
             {
-                if (_context.IsExecutable)
+                // When the project builds its own native apphost (UseAppHost=true), MSBuild's publish
+                // already emits <assembly_name>[.exe] as the executable. Synthesizing our launcher here
+                // would land on that same path and clobber the apphost -- and on Linux it drags the Go
+                // launcher's whole stdlib (and its CVEs) into every image for no runtime benefit. So
+                // respect the project's choice: only provide our launcher when UseAppHost is off, which
+                // is rules_msbuild's default (see MSBuildContext BuildEnvironment).
+                var useAppHost = project.GetProperty("UseAppHost")?.EvaluatedValue;
+                var projectOwnsLauncher = string.Equals(useAppHost, "true", StringComparison.OrdinalIgnoreCase);
+
+                if (_context.IsExecutable && !projectOwnsLauncher)
                 {
                     var launcherFactory = new LauncherFactory();
                     var launcherPath = Path.Combine(_context.MSBuild.PublishDir, _context.Command.assembly_name);
