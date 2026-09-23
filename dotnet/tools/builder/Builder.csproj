@@ -24,8 +24,12 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Build.Locator" Version="1.10.2" />
-    <PackageReference Include="SamHowes.Microsoft.Build" Version="18.6.3" />
-    <PackageReference Include="SamHowes.Microsoft.Build.Framework" Version="18.6.3" />
+    <!-- SamHowes MSBuild version must match the .NET SDK's MSBuild feature band: the builder's
+         PathMapper depends on the SamHowes-patched Microsoft.Build.ICustomInterner, so the bundled
+         engine cannot delegate to the SDK's stock MSBuild. 18.0.x = SDK 1xx band (10.0.112 →
+         MSBuild 18.0.11). For the 3xx band (18.6.x) see branch master_10.0.3xx. -->
+    <PackageReference Include="SamHowes.Microsoft.Build" Version="18.0.13" />
+    <PackageReference Include="SamHowes.Microsoft.Build.Framework" Version="18.0.13" />
     <PackageReference Include="CommandLineParser" Version="2.9.0-preview1" />
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
