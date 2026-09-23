@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace RulesMSBuild.Tools.Builder.Launcher
 {
@@ -24,10 +25,18 @@ namespace RulesMSBuild.Tools.Builder.Launcher
 
         public int CreatePublish(string launcherTemplate, string outputPath, BuildContext context)
         {
-            using var writer = CreateWriter(launcherTemplate, outputPath + ".exe");
-            writer.Add("assembly_name", context.Command.assembly_name);
-            writer.Add("binary_type", "DotnetPublish");
-            writer.Save();
+            // The ".exe" launcher is a copy of the host-built native Go launcher template. It is
+            // only a usable executable on Windows; on other platforms it is dead weight in the
+            // publish output (the bash script written below is the entrypoint there) and drags the
+            // entire Go stdlib -- and its CVEs -- into every linux OCI image. Emit it on Windows
+            // only.
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                using var writer = CreateWriter(launcherTemplate, outputPath + ".exe");
+                writer.Add("assembly_name", context.Command.assembly_name);
+                writer.Add("binary_type", "DotnetPublish");
+                writer.Save();
+            }
 
             using var script = new StreamWriter(File.Create(outputPath));
             script.WriteLine(@"#!/bin/bash
