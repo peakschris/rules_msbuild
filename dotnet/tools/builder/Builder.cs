@@ -106,6 +106,17 @@ namespace RulesMSBuild.Tools.Builder
 
                 var result = ExecuteBuild(project);
 
+                // Coverity C# capture: after a successful build, emit a self-contained,
+                // restore-suppressed `dotnet build` response file so bb's live cov-build pass can
+                // replay the compile outside Bazel, where MSBuild spawns a discrete csc child that
+                // Coverity's process monitor recognizes.
+                if (_action == "build"
+                    && result == BuildResultCode.Success
+                    && !string.IsNullOrEmpty(_context.Command.CoverityRsp))
+                {
+                    WriteCoverityRsp(_context.Command.CoverityRsp!);
+                }
+
                 EndBuild(result);
                 return (int)result;
             }
@@ -149,6 +160,88 @@ namespace RulesMSBuild.Tools.Builder
                 // regardless of success or failure. The real outputs live under bazel-out and are untouched.
                 CleanSourceTreeArtifacts();
             }
+        }
+
+        /// <summary>
+        /// Serializes a self-contained, restore-suppressed <c>dotnet build</c> response file for this
+        /// project so bb's live Coverity C# pass can replay <c>cov-build -- dotnet build @&lt;rsp&gt;</c>
+        /// outside the Bazel sandbox. The replay must run with cwd == exec-root (so Directory.Bazel.props
+        /// derives the right BazelPackage) and with the SDK env (DOTNET_ROOT etc.) set by bb. MSBuild then
+        /// spawns a discrete csc child -- which Coverity's <c>--bazel</c> replay path cannot see, because
+        /// the normal build compiles in-process via builder.dll (see servicemesh plan / memory
+        /// coverity-csharp-live-pass-spike-proven).
+        /// </summary>
+        private void WriteCoverityRsp(string rspPath)
+        {
+            var msb = _context.MSBuild;
+
+            // The declared Bazel output path is relative (bazel-out/.../X.coverity.rsp). By the time this
+            // runs, BeginBuild() has already moved the CWD to the project directory (an exec-root junction
+            // into the source tree), so a relative write would land under the source tree, not the exec
+            // root where Bazel expects the output. Anchor it to ExecRoot, which is captured at
+            // BuildContext construction (before any CWD change) and is the correct exec root.
+            if (!Path.IsPathRooted(rspPath))
+                rspPath = Path.Combine(_context.Bazel.ExecRoot, rspPath);
+
+            // Emit paths with forward slashes: a response file treats a trailing backslash as a line
+            // continuation, and dotnet/MSBuild accept '/' on Windows. The project path is the exec-root
+            // path (_context.ProjectFile) so the replay, run from the exec-root, resolves BazelPackage.
+            string Norm(string p) => p.Replace('\\', '/');
+
+            var lines = new List<string>
+            {
+                Norm(_context.ProjectFile),
+                "--no-restore",
+                "-t:Build",
+                "-p:Restore=false",
+                "--no-incremental",
+                "-nologo",
+            };
+
+            // Global properties override the csproj. Skip RestoreUseStaticGraphEvaluation: under the
+            // SDK 10.x band it re-triggers a static-graph restore that rewrites the read-only
+            // nuget.g.props even with Restore=false, failing the offline replay.
+            foreach (var (name, value) in msb.GlobalProperties)
+            {
+                if (name == "RestoreUseStaticGraphEvaluation")
+                    continue;
+                lines.Add($"-p:{name}={Norm(value)}");
+            }
+
+            // BuildEnvironment values are normally exported as environment variables; re-express them as
+            // explicit -p: so the response file is self-contained and does not depend on bb rebuilding
+            // the builder's env. PublishDir points into read-only bazel-out and is unused by -t:Build, so
+            // it is skipped. The replay-time writable-scratch paths (MSBuildProjectExtensionsPath,
+            // IntermediateOutputPath, OutputPath) are deliberately NOT baked here -- they are volatile
+            // per run, so bb appends them on the replay command line (a later -p: wins).
+            //
+            // UseAppHost is skipped too, and the reason is subtle: as an environment variable it is
+            // MSBuild's LOWEST-precedence property, so an exe csproj's own <UseAppHost>true</UseAppHost>
+            // overrides the builder's UseAppHost=false in the live build. Re-emitting it as -p: would
+            // promote it to a GLOBAL property (highest precedence) that the csproj can no longer override,
+            // forcing UseAppHost=false onto projects that set SelfContained=true -- an illegal combo that
+            // fails the standalone replay with NETSDK1067. Omitting it lets the csproj value win in the
+            // replay exactly as it does in the live build.
+            //
+            // NoWarn is skipped for the same precedence reason. The builder sets NoWarn=NU1603 (a restore-
+            // phase NuGet warning) as an environment variable, so a csproj that appends its own suppressions
+            // -- <NoWarn>$(NoWarn);1591</NoWarn> -- still wins in the live build. Re-emitting NoWarn=NU1603
+            // as a global -p: has highest precedence, silently dropping the csproj's <NoWarn> assignment; a
+            // project with TreatWarningsAsErrors=true and GenerateDocumentationFile=true then fails the
+            // replay with CS1591 (missing XML doc). Omitting it is safe: NU1603 is a restore warning, and
+            // the rsp already carries --no-restore + -p:Restore=false, so it cannot fire at replay.
+            foreach (var (name, value) in msb.BuildEnvironment)
+            {
+                if (name == "PublishDir" || name == "UseAppHost" || name == "NoWarn")
+                    continue;
+                lines.Add($"-p:{name}={Norm(value)}");
+            }
+
+            var rspDir = Path.GetDirectoryName(rspPath);
+            if (!string.IsNullOrEmpty(rspDir))
+                Directory.CreateDirectory(rspDir);
+            File.WriteAllLines(rspPath, lines);
+            Debug($"wrote coverity rsp: {rspPath}");
         }
 
         /// <summary>

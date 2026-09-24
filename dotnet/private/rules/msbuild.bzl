@@ -94,7 +94,7 @@ def _test_impl(ctx):
 
 def _make_executable(ctx, is_test):
     dotnet = dotnet_exec_context(ctx, True, is_test)
-    info, outputs = build_assembly(ctx, dotnet)
+    info, outputs, coverity_outputs = build_assembly(ctx, dotnet)
 
     # Under `bazel coverage`, stage the coverlet data-collector adapter into the
     # test's runfiles and tell the launcher where to find it.
@@ -125,12 +125,13 @@ def _make_executable(ctx, is_test):
         _instrumented_files(ctx),
         OutputGroupInfo(
             all = outputs,
+            coverity = coverity_outputs,
         ),
     ]
 
 def _library_impl(ctx):
     dotnet = dotnet_exec_context(ctx, False)
-    info, outputs = build_assembly(ctx, dotnet)
+    info, outputs, coverity_outputs = build_assembly(ctx, dotnet)
     return [
         DefaultInfo(
             files = depset([info.assembly]),
@@ -140,6 +141,7 @@ def _library_impl(ctx):
         _instrumented_files(ctx),
         OutputGroupInfo(
             all = outputs,
+            coverity = coverity_outputs,
         ),
     ]
 
