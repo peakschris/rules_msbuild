@@ -86,6 +86,14 @@ namespace NuGetParser
             b.SetAttrRaw("srcs", "glob([\"bazel_packages/**/*\"])");
             b.EndRule();
 
+            // Expose the real extracted global-packages tree (packages/<id>/<version>/...)
+            // as declared Bazel inputs, so consumers such as rules_sbom's offline NuGet
+            // restore can read the already-fetched closure instead of re-pulling it from
+            // the network inside a sandbox.
+            b.StartRule("filegroup", "packages_all");
+            b.SetAttrRaw("srcs", "glob([\"packages/**/*\"])");
+            b.EndRule();
+
             b.StartRule("tfm_mapping", "tfm_mapping");
             b.SetAttr("frameworks", _context.Tfms.OrderBy(t => t.Key).Select(t => ":" + t.Key));
             b.EndRule();
