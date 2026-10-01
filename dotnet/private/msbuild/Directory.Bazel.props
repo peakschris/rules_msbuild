@@ -2,7 +2,17 @@
     <Import Condition="$(_BazelDirectoryProps) != ''" Project="$(_BazelDirectoryProps)"/>
     <PropertyGroup>
         <!-- @dotnet_sdk//:builder will set $(ExecRoot) and $(BINDIR)-->
-        <BazelPackage>$(MSBuildProjectDirectory.Substring($(ExecRoot.Length)).Replace('\','/').TrimStart('/'))</BazelPackage>
+        <!--
+            BazelPackage = the project directory relative to its checkout root. On Windows, and for the
+            entry project on any OS, MSBuildProjectDirectory lives under $(ExecRoot). On Linux, however,
+            ProjectReference deps canonicalize to the real source checkout ($(BazelSourceRoot), passed by
+            bb at coverity replay time), which is NOT a prefix of $(ExecRoot) — a bare
+            .Substring($(ExecRoot.Length)) then throws MSB4184 (start index past end of string). Guard
+            each branch so the substring only runs when its prefix actually matches; leaving BazelPackage
+            empty is harmless for replay (no output collision matters there) and cannot throw.
+        -->
+        <BazelPackage Condition="$(MSBuildProjectDirectory.StartsWith($(ExecRoot)))">$(MSBuildProjectDirectory.Substring($(ExecRoot.Length)).Replace('\','/').TrimStart('/'))</BazelPackage>
+        <BazelPackage Condition="'$(BazelPackage)' == '' and '$(BazelSourceRoot)' != '' and $(MSBuildProjectDirectory.StartsWith($(BazelSourceRoot)))">$(MSBuildProjectDirectory.Substring($(BazelSourceRoot.Length)).Replace('\','/').TrimStart('/'))</BazelPackage>
 
         <!-- Override MSBuild output path properties -->
 

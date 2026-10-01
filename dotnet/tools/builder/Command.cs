@@ -73,6 +73,12 @@ namespace RulesMSBuild.Tools.Builder
         [Option("runfiles_manifest", Required = false)]
         public string RunfilesManifest { get; set; }
 
+        // When set, the builder serializes a self-contained, restore-suppressed `dotnet build`
+        // response file to this path after a successful build. bb's live Coverity C# pass replays
+        // `cov-build -- dotnet build @<this>` so a discrete csc child is spawned and captured.
+        [Option("coverity_rsp", Required = false)]
+        public string? CoverityRsp { get; set; }
+
 
         [Option("directory")] public IEnumerable<string> DirectorySrcs { get; set; }
         public string? ExecRoot { get; set; }

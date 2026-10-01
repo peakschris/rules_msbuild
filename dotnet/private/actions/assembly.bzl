@@ -31,6 +31,25 @@ def build_assembly(ctx, dotnet):
     cache_manifest = write_cache_manifest(ctx, cache, caches)
     args, cmd_outputs = make_builder_cmd(ctx, dotnet, "build", restore.directory_info, restore.assembly_name)
 
+    # Coverity C# capture (see servicemesh plan): the builder serializes a self-contained,
+    # restore-suppressed `dotnet build` response file for this project. bb's live cov-build pass
+    # replays `cov-build -- dotnet build @<rsp>` outside Bazel so MSBuild spawns a discrete csc
+    # child that Coverity's process monitor recognizes -- the `--bazel` replay path cannot see the
+    # in-process builder.dll compile. Surfaced via the `coverity` output group, never built by
+    # default. See dotnet/tools/builder/Builder.cs WriteCoverityRsp().
+    coverity_rsp = ctx.actions.declare_file(ctx.attr.name + ".coverity.rsp")
+    args.add_all(["--coverity_rsp", coverity_rsp])
+
+    # bb's live Coverity C# pass replays this rsp with a standalone `dotnet build` OUTSIDE Bazel, so
+    # every file that build action consumes -- restore metadata (project.assets.json, nuget.g.props),
+    # the referenced NuGet package assemblies, and dependency project DLLs -- must exist on local disk
+    # at replay time. Those are INPUTS to this action (produced by the separate _restore target / deps),
+    # never outputs of this target, so a remote cache hit on `--output_groups=coverity` would otherwise
+    # materialize the rsp alone and the replay's `dotnet build` would fail at NuGet resolution. Bundling
+    # the full input closure into the `coverity` output group (below, via the rule impls) forces Bazel to
+    # download all of it as top-level outputs. Kept OUT of `outputs`/DotnetLibraryInfo.files so it never
+    # leaks into dependents' runfiles.
+
     protos = _getProtos(ctx)
 
     inputs = depset(
@@ -47,10 +66,13 @@ def build_assembly(ctx, dotnet):
         cache.result,
     ] + cmd_outputs
 
+    # coverity_rsp is a declared output the action always produces, but it is kept out of `outputs`
+    # (the `all` output group / DotnetLibraryInfo.files) so it never leaks into dependents' runfiles.
+    # It is surfaced only through the dedicated `coverity` output group in the rule impls.
     ctx.actions.run(
         mnemonic = "MSBuild",
         inputs = inputs,
-        outputs = outputs,
+        outputs = outputs + [coverity_rsp],
         executable = dotnet.sdk.dotnet,
         arguments = [args],
         env = dotnet.env,
@@ -74,7 +96,14 @@ def build_assembly(ctx, dotnet):
         executable = dotnet.config.is_executable,
     )
 
-    return info, outputs
+    # The coverity output group carries the rsp PLUS the full input closure (see the comment at the
+    # coverity_rsp declaration): srcs, project file, restore metadata, NuGet package assemblies, and
+    # dependency DLLs -- everything the standalone `dotnet build @rsp` replay reads. Requesting
+    # `--output_groups=coverity` then forces Bazel to materialize all of it locally even on a remote
+    # cache hit, where the default output set (assembly only) would leave the replay's inputs undownloaded.
+    coverity_outputs = depset([coverity_rsp], transitive = [inputs])
+
+    return info, outputs, coverity_outputs
 
 def _getProtos(ctx):
     deps = []
