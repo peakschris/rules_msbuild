@@ -24,6 +24,35 @@ def _instrumented_files(ctx):
         extensions = ["cs", "fs", "vb"],
     )
 
+# Defence in depth: never instrument the test framework / host, even if every
+# Include filter is dropped by coverlet. Module (assembly) names, not source paths:
+# e.g. src/Microsoft.TestPlatform.Common comes from Microsoft.VisualStudio.TestPlatform.Common.dll.
+_COVERLET_EXCLUDE = ",".join([
+    "[xunit*]*",
+    "[Microsoft.TestPlatform*]*",
+    "[Microsoft.VisualStudio.*]*",
+    "[testhost*]*",
+    "[Microsoft.Testing*]*",
+    "[Moq]*",
+])
+
+def _coverlet_module_filter(assembly_name):
+    """Builds a coverlet `Include` module filter (`[name]*`) for an assembly.
+
+    coverlet silently DROPS any filter whose module part contains a character
+    other than [A-Za-z0-9_.*?] (InstrumentationHelper.IsValidFilterExpression).
+    If every Include filter is dropped, coverlet falls back to "no include
+    filter" and instruments every module in the test output dir (xunit, testhost,
+    Microsoft.TestPlatform, Moq ... via their source-linked PDBs). Assembly names
+    such as `tc-vault` therefore must be written with `*` standing in for each
+    unsupported character (`tc*vault`).
+    """
+    safe = "".join([
+        c if (c.isalnum() or c == "_" or c == ".") else "*"
+        for c in assembly_name.elems()
+    ])
+    return "[%s]*" % safe
+
 def _coverlet_adapter(ctx):
     """Locate the coverlet XPlat 'Code Coverage' data collector adapter.
 
@@ -108,15 +137,16 @@ def _make_executable(ctx, is_test):
         # disable the missing-local-source guard. On sandboxed builds the build
         # execroot is deleted before the test runs, so deterministic PDB source
         # paths resolve to nothing and coverlet's default MissingAll behavior drops
-        # every module -> zero coverage. Include=[Sut]* keeps first-party only.
+        # every module -> zero coverage. Include=[Sut]* keeps first-party only (names
+        # are sanitized by _coverlet_module_filter so coverlet does not drop the filter).
         include_names = [
             dep[DotnetLibraryInfo].restore.assembly_name
             for dep in ctx.attr.deps
             if DotnetLibraryInfo in dep
         ]
         if include_names:
-            includes = ",".join(["[%s]*" % n for n in include_names])
-            coverlet_collect_extra = ";ExcludeAssembliesWithoutSources=None;Include=" + includes
+            includes = ",".join([_coverlet_module_filter(n) for n in include_names])
+            coverlet_collect_extra = ";ExcludeAssembliesWithoutSources=None;Include=" + includes + ";Exclude=" + _COVERLET_EXCLUDE
 
     launcher = make_launcher(
         ctx,
