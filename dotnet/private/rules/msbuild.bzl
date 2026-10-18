@@ -24,6 +24,18 @@ def _instrumented_files(ctx):
         extensions = ["cs", "fs", "vb"],
     )
 
+# Defence in depth: never instrument the test framework / host, even if every
+# Include filter is dropped by coverlet. Module (assembly) names, not source paths:
+# e.g. src/Microsoft.TestPlatform.Common comes from Microsoft.VisualStudio.TestPlatform.Common.dll.
+_COVERLET_EXCLUDE = ",".join([
+    "[xunit*]*",
+    "[Microsoft.TestPlatform*]*",
+    "[Microsoft.VisualStudio.*]*",
+    "[testhost*]*",
+    "[Microsoft.Testing*]*",
+    "[Moq]*",
+])
+
 def _coverlet_module_filter(assembly_name):
     """Builds a coverlet `Include` module filter (`[name]*`) for an assembly.
 
@@ -134,7 +146,7 @@ def _make_executable(ctx, is_test):
         ]
         if include_names:
             includes = ",".join([_coverlet_module_filter(n) for n in include_names])
-            coverlet_collect_extra = ";ExcludeAssembliesWithoutSources=None;Include=" + includes
+            coverlet_collect_extra = ";ExcludeAssembliesWithoutSources=None;Include=" + includes + ";Exclude=" + _COVERLET_EXCLUDE
 
     launcher = make_launcher(
         ctx,
