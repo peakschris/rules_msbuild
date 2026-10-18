@@ -124,6 +124,7 @@ assembly_args=("$target_bin_path" %assembly_args%)
 assembly_args+=("$@")
 dotnet_cmd="%dotnet_cmd%"
 coverlet_collector_dll="%coverlet_collector_dll%"
+coverlet_collect_extra="%coverlet_collect_extra%"
 if [[ $dotnet_cmd == "test" ]]; then
   assembly_args+=("--logger" "%dotnet_logger%;%log_path_arg_name%=${XML_OUTPUT_FILE:-"test.xml"}")
   # Under `bazel coverage`, turn on coverlet's XPlat collector and emit lcov.
@@ -139,11 +140,16 @@ if [[ $dotnet_cmd == "test" ]]; then
     writable_dir="${writable_root}/$(basename "$src_dir")"
     rm -rf "$writable_dir"
     mkdir -p "$writable_dir"
-    cp -R "$src_dir/." "$writable_dir/"
+    # -L dereferences symlinks: bazel runfiles/outputs are symlinks into the
+    # read-only content cache, so a plain `cp -R` would copy the links and coverlet
+    # (which instruments in place, then copies the original module back over itself
+    # in RestoreOriginalModule) would hit "Permission denied" writing through the
+    # link to the read-only cache. Copy real files, then make them writable.
+    cp -RL "$src_dir/." "$writable_dir/"
     chmod -R u+w "$writable_dir"
     target_bin_path="${writable_dir}/$(basename "$target_bin_path")"
     assembly_args[0]="$target_bin_path"
-    assembly_args+=("--collect" "XPlat Code Coverage;Format=lcov" \
+    assembly_args+=("--collect" "XPlat Code Coverage;Format=lcov${coverlet_collect_extra}" \
       "--TestAdapterPath" "$adapter_dir" \
       "--results-directory" "${COVERAGE_DIR}/_coverlet")
   fi
