@@ -36,6 +36,10 @@ _COVERLET_EXCLUDE = ",".join([
     "[Moq]*",
 ])
 
+# Source-generator output (e.g. LibraryImportGenerator, RegexGenerator) is emitted under
+# .../obj/... and is not first-party code; keep it out of the report.
+_COVERLET_EXCLUDE_BY_FILE = "**/obj/**"
+
 def _coverlet_module_filter(assembly_name):
     """Builds a coverlet `Include` module filter (`[name]*`) for an assembly.
 
@@ -146,7 +150,7 @@ def _make_executable(ctx, is_test):
         ]
         if include_names:
             includes = ",".join([_coverlet_module_filter(n) for n in include_names])
-            coverlet_collect_extra = ";ExcludeAssembliesWithoutSources=None;Include=" + includes + ";Exclude=" + _COVERLET_EXCLUDE
+            coverlet_collect_extra = ";ExcludeAssembliesWithoutSources=None;Include=" + includes + ";Exclude=" + _COVERLET_EXCLUDE + ";ExcludeByFile=" + _COVERLET_EXCLUDE_BY_FILE
 
     launcher = make_launcher(
         ctx,
