@@ -106,6 +106,19 @@ namespace RulesMSBuild.Tools.Builder
 
                 var result = ExecuteBuild(project);
 
+                // NuGet's Restore target intermittently reports success (no error logged, builder exits 0)
+                // without writing any of its outputs (project.assets.json, *.nuget.g.props/targets, ...).
+                // Bazel then only reports "not all outputs were created or valid", with no clue why. Fail
+                // here instead, with the paths NuGet was given. Retrying in-process is not possible: the
+                // BuildManager would answer a second Restore request from BazelResultCache, which never
+                // clears results for a configuration.
+                if (_action == "restore"
+                    && result == BuildResultCode.Success
+                    && !VerifyRestoreOutputs(project))
+                {
+                    result = BuildResultCode.Failure;
+                }
+
                 // Coverity C# capture: after a successful build, emit a self-contained,
                 // restore-suppressed `dotnet build` response file so bb's live cov-build pass can
                 // replay the compile outside Bazel, where MSBuild spawns a discrete csc child that
@@ -647,6 +660,39 @@ namespace RulesMSBuild.Tools.Builder
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Checks that a restore which MSBuild reported as successful actually produced project.assets.json.
+        /// NuGet's static-graph restore (RestoreUseStaticGraphEvaluation) has been seen to succeed without
+        /// writing anything to the restore directory; the builder-written .bazel.props/.targets are then the
+        /// only files present. Logs the inputs NuGet was given so the failure is diagnosable.
+        /// </summary>
+        private bool VerifyRestoreOutputs(ProjectInstance project)
+        {
+            var restoreDir = _context.MSBuild.RestoreDir;
+            var assets = Path.Combine(restoreDir, "project.assets.json");
+            if (File.Exists(assets)) return true;
+
+            Error($"{_context.Bazel.Label}: error BZ0003: NuGet restore reported success but did not write " +
+                  $"{assets}. This is a transient NuGet failure; re-running the build usually succeeds.");
+            Error($"  ProjectFile = '{_context.ProjectFile}'");
+            Error($"  ExecRoot = '{_context.Bazel.ExecRoot}'");
+            Error($"  CurrentDirectory = '{Environment.CurrentDirectory}'");
+            foreach (var name in new[]
+                     {
+                         "BazelPackage", "BaseIntermediateOutputPath", "RestoreOutputPath", "ProjectAssetsFile",
+                         "RestoreUseStaticGraphEvaluation", "TargetFramework", "NuGetPackageRoot",
+                     })
+            {
+                Error($"  {name} = '{project.GetPropertyValue(name)}'");
+            }
+
+            var listing = Directory.Exists(restoreDir)
+                ? string.Join(", ", Array.ConvertAll(Directory.GetFileSystemEntries(restoreDir), Path.GetFileName))
+                : "<missing>";
+            Error($"  {restoreDir} contains: {listing}");
+            return false;
         }
 
         private void EndBuild(BuildResultCode result)
