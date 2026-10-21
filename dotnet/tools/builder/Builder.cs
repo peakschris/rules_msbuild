@@ -339,6 +339,22 @@ namespace RulesMSBuild.Tools.Builder
                 ToolsetDefinitionLocations.Default);
 
 
+            // NuGet's isolated special-folder env vars (APPDATA/LOCALAPPDATA/USERPROFILE/
+            // PROGRAMFILES/ProgramFiles(x86)) are passed as paths RELATIVE to the exec root so the
+            // Bazel action cache key stays machine-independent. But NuGet resolves them against the
+            // *current* directory, which we are about to switch to the project directory below — so
+            // without pinning them NuGet writes its user config/migrations (NuGet/NuGet.Config,
+            // NuGet/Migrations/1) into "<project>/external/..." inside the (symlinked) source tree.
+            // Re-root them to absolute paths under the exec root now, while CWD is still the exec root.
+            foreach (var name in new[] { "APPDATA", "LOCALAPPDATA", "USERPROFILE", "PROGRAMFILES", "ProgramFiles(x86)" })
+            {
+                var value = Environment.GetEnvironmentVariable(name);
+                if (!string.IsNullOrEmpty(value) && !Path.IsPathRooted(value))
+                {
+                    Environment.SetEnvironmentVariable(name, Path.GetFullPath(Path.Combine(_context.Bazel.ExecRoot, value)));
+                }
+            }
+
             // our restore outputs are relative to the project directory
             Environment.CurrentDirectory = _context.ProjectDirectory;
 

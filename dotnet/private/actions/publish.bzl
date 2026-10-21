@@ -37,6 +37,18 @@ def publish(ctx):
     )
     outputs = [output_dir, cache.result, cache.project] + cmd_outputs
 
+    # Honor the default shell environment so operator-declared `--action_env`
+    # entries reach MSBuild. This is what lets a NativeAOT (`<PublishAot>`) project
+    # pick up the MSVC `PATH`/`LIB`/`INCLUDE` for its native link step, which the
+    # publish action would otherwise never see.
+    #
+    # Hermeticity is preserved by `--incompatible_strict_action_env`: with it set,
+    # the inherited environment is deterministic (a static PATH plus exactly the
+    # declared `--action_env` vars, never the client's ambient env). The explicit
+    # `env = dotnet.env` still wins per key, so the NuGet isolation vars
+    # (USERPROFILE/APPDATA/LOCALAPPDATA/ProgramFiles(x86)/PROGRAMFILES) stay pinned.
+    # See dotnet/private/msbuild/ENVIRONMENT.md for the full rationale and the csproj
+    # change AOT projects need (IlcUseEnvironmentalTools).
     ctx.actions.run(
         mnemonic = "DotnetPublish",
         inputs = inputs,
@@ -44,6 +56,7 @@ def publish(ctx):
         executable = dotnet.sdk.dotnet,
         arguments = [args],
         env = dotnet.env,
+        use_default_shell_env = True,
         tools = dotnet.builder.files,
     )
 

@@ -143,7 +143,11 @@ def _configure_host_packages(ctx, dotnet, config):
         "--list",
     ]
 
-    result = ctx.execute(args)
+    # Pass dotnet.env (DOTNET_CLI_HOME/USERPROFILE/...) explicitly: under
+    # --experimental_strict_repo_env the subprocess only sees declared repo_env vars,
+    # and without the dotnet home vars `dotnet nuget locals` resolves a null path
+    # ("Value cannot be null. (Parameter 'path1')"). Mirrors the fetch call above.
+    result = ctx.execute(args, environment = dotnet.env)
     if result.return_code != 0:
         fail("failed to find global-packages folder with dotnet: %s" % (result.stdout))
 
@@ -190,14 +194,21 @@ def _copy_parser(ctx, config):
     return config.parser_base.get_child(parser_path.basename)
 
 def _fetch_custom_packages(ctx, config):
-    ctx.download(
-        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.0.11a/SamHowes.Microsoft.Build.18.0.11.nupkg",
-        output = config.bazel_packages.get_child("SamHowes.Microsoft.Build.18.0.11.nupkg"),
-    )
-    ctx.download(
-        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.0.11a/SamHowes.Microsoft.Build.Framework.18.0.11.nupkg",
-        output = config.bazel_packages.get_child("SamHowes.Microsoft.Build.Framework.18.0.11.nupkg"),
-    )
+    # Consume the vendored SamHowes packages (//deps/samhowes), rebuilt from source with the
+    # ILLink/out-of-proc fixes (TypeLoader in-process task loading + MLC lifetime, TaskHostTask
+    # output). The Build package also bundles Microsoft.Build.Utilities.Core/Tasks.Core, so the
+    # builder resolves out-of-proc/ILLink task base classes without a separate staging step.
+    # Referenced via Label so there is no machine-specific absolute path.
+    # TODO: replace with ctx.download of a published release once these fixes are upstreamed.
+    # vendored-package rev: 2 (bump to force re-fetch/re-extract when the nupkgs change)
+    for name in [
+        "SamHowes.Microsoft.Build.18.0.11.nupkg",
+        "SamHowes.Microsoft.Build.Framework.18.0.11.nupkg",
+    ]:
+        ctx.symlink(
+            ctx.path(Label("@rules_msbuild//deps/samhowes:" + name)),
+            config.bazel_packages.get_child(name),
+        )
 
 def _fetch_credentials_for_sources(ctx, sources, os):
     """Call the Bazel credential helper for each package source and return NuGet credential entries.

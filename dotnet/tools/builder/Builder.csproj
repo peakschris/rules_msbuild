@@ -33,4 +33,11 @@
     <PackageReference Include="CommandLineParser" Version="2.9.0-preview1" />
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+  <!--
+    Microsoft.Build.Utilities.Core / Microsoft.Build.Tasks.Core are delivered next to builder.dll by
+    the vendored SamHowes.Microsoft.Build package (it bundles them in lib/net10.0/). The builder's
+    TypeLoader needs them to resolve the base classes of out-of-proc/ILLink tasks (MSB4062 otherwise).
+    No staging step / absolute path is required.
+  -->
 </Project>
