@@ -17,7 +17,7 @@ def declare_constraints():
     Each platform defined here selects a dotnetos and dotnetarch constraint value.
     These platforms may be used with --platforms for cross-compilation,
     though users may create their own platforms (and
-    @bazel_tools//platforms:default_platform will be used most of the time).
+    @platforms//host will be used most of the time).
     """
     for dotnetos, constraint in DOTNETOS_CONSTRAINTS.items():
         if constraint.startswith("@rules_msbuild//dotnet:"):
