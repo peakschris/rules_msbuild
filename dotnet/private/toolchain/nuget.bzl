@@ -195,11 +195,11 @@ def _copy_parser(ctx, config):
 
 def _fetch_custom_packages(ctx, config):
     ctx.download(
-        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.0.11a/SamHowes.Microsoft.Build.18.0.11.nupkg",
+        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.0.11b/SamHowes.Microsoft.Build.18.0.11.nupkg",
         output = config.bazel_packages.get_child("SamHowes.Microsoft.Build.18.0.11.nupkg"),
     )
     ctx.download(
-        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.0.11a/SamHowes.Microsoft.Build.Framework.18.0.11.nupkg",
+        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.0.11b/SamHowes.Microsoft.Build.Framework.18.0.11.nupkg",
         output = config.bazel_packages.get_child("SamHowes.Microsoft.Build.Framework.18.0.11.nupkg"),
     )
 
