@@ -143,7 +143,11 @@ def _configure_host_packages(ctx, dotnet, config):
         "--list",
     ]
 
-    result = ctx.execute(args)
+    # Pass dotnet.env (DOTNET_CLI_HOME/USERPROFILE/...) explicitly: under
+    # --experimental_strict_repo_env the subprocess only sees declared repo_env vars,
+    # and without the dotnet home vars `dotnet nuget locals` resolves a null path
+    # ("Value cannot be null. (Parameter 'path1')"). Mirrors the fetch call above.
+    result = ctx.execute(args, environment = dotnet.env)
     if result.return_code != 0:
         fail("failed to find global-packages folder with dotnet: %s" % (result.stdout))
 
@@ -191,11 +195,11 @@ def _copy_parser(ctx, config):
 
 def _fetch_custom_packages(ctx, config):
     ctx.download(
-        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.0.11a/SamHowes.Microsoft.Build.18.0.11.nupkg",
+        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.0.11b/SamHowes.Microsoft.Build.18.0.11.nupkg",
         output = config.bazel_packages.get_child("SamHowes.Microsoft.Build.18.0.11.nupkg"),
     )
     ctx.download(
-        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.0.11a/SamHowes.Microsoft.Build.Framework.18.0.11.nupkg",
+        "https://github.com/peakschris/SamHowes.Microsoft.Build/releases/download/v18.0.11b/SamHowes.Microsoft.Build.Framework.18.0.11.nupkg",
         output = config.bazel_packages.get_child("SamHowes.Microsoft.Build.Framework.18.0.11.nupkg"),
     )
 

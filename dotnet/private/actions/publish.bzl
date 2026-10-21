@@ -44,6 +44,7 @@ def publish(ctx):
         executable = dotnet.sdk.dotnet,
         arguments = [args],
         env = dotnet.env,
+        use_default_shell_env = True,
         tools = dotnet.builder.files,
     )
 

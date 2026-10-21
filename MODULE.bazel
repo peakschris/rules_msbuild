@@ -85,7 +85,7 @@ nuget.fetch(
         "coverlet.collector/6.2.0": ["net10.0"],
         "Microsoft.Build.Locator/1.10.2": ["net10.0"],
         "Microsoft.Build.Tasks.Core/18.6.3": ["net10.0"],
-        "Microsoft.Build.Utilities.Core/18.6.3": ["net10.0"],
+        "Microsoft.Build.Utilities.Core/18.0.11": ["net10.0"],
         "Microsoft.NET.StringTools/18.6.3": ["net10.0"],
         "Microsoft.NET.Test.Sdk/16.7.1": [
             "net10.0",
