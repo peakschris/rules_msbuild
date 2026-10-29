@@ -353,13 +353,18 @@ namespace RulesMSBuild.Tools.Builder
 
 
             // NuGet's isolated special-folder env vars (APPDATA/LOCALAPPDATA/USERPROFILE/
-            // PROGRAMFILES/ProgramFiles(x86)) are passed as paths RELATIVE to the exec root so the
+            // PROGRAMFILES/ProgramFiles(x86); HOME/XDG_CONFIG_HOME/XDG_DATA_HOME on Linux) are passed as
+            // paths RELATIVE to the exec root so the
             // Bazel action cache key stays machine-independent. But NuGet resolves them against the
             // *current* directory, which we are about to switch to the project directory below — so
             // without pinning them NuGet writes its user config/migrations (NuGet/NuGet.Config,
             // NuGet/Migrations/1) into "<project>/external/..." inside the (symlinked) source tree.
             // Re-root them to absolute paths under the exec root now, while CWD is still the exec root.
-            foreach (var name in new[] { "APPDATA", "LOCALAPPDATA", "USERPROFILE", "PROGRAMFILES", "ProgramFiles(x86)" })
+            foreach (var name in new[]
+                     {
+                         "APPDATA", "LOCALAPPDATA", "USERPROFILE", "PROGRAMFILES", "ProgramFiles(x86)",
+                         "HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME",
+                     })
             {
                 var value = Environment.GetEnvironmentVariable(name);
                 if (!string.IsNullOrEmpty(value) && !Path.IsPathRooted(value))
@@ -367,6 +372,8 @@ namespace RulesMSBuild.Tools.Builder
                     Environment.SetEnvironmentVariable(name, Path.GetFullPath(Path.Combine(_context.Bazel.ExecRoot, value)));
                 }
             }
+
+            MarkNuGetMigrationsDone();
 
             // our restore outputs are relative to the project directory
             Environment.CurrentDirectory = _context.ProjectDirectory;
@@ -608,6 +615,38 @@ namespace RulesMSBuild.Tools.Builder
             {
                 var rel = Rel(src, file);
                 File.Copy(file, Path.Combine(dest, rel));
+            }
+        }
+
+        /// <summary>
+        /// Every NuGet process (the static graph restore child, and the in-proc NuGetSdkResolver) first runs
+        /// NuGet.Common.Migrations.MigrationRunner, which takes the machine-wide named mutex "NuGet-Migrations"
+        /// unless the marker file &lt;data home&gt;/NuGet/Migrations/1 already exists. Our isolated data home lives
+        /// in the sandbox, so the marker never persists and every restore takes the mutex. On Linux, .NET's named
+        /// mutex open intermittently throws IOException ("The system cannot open the device or file specified"),
+        /// which NuGet does not catch: the restore child exits 255 and the action fails. Migration 1 only fixes
+        /// permissions on a pre-existing user ~/.nuget tree, which an isolated home never has, so record it as done
+        /// up front and NuGet never touches the mutex. Keep the path logic in sync with
+        /// MigrationRunner.GetMigrationsDirectory. Best-effort: on failure NuGet just runs the migration itself.
+        /// </summary>
+        private static void MarkNuGetMigrationsDone()
+        {
+            var dataHome = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+                : Environment.GetEnvironmentVariable("XDG_DATA_HOME") is { Length: > 0 } xdgDataHome
+                    ? xdgDataHome
+                    : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share");
+            var marker = Path.GetFullPath(Path.Combine(dataHome, "NuGet", "Migrations", "1"));
+            try
+            {
+                if (File.Exists(marker))
+                    return;
+                Directory.CreateDirectory(Path.GetDirectoryName(marker)!);
+                File.WriteAllText(marker, string.Empty);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Debug($"could not write NuGet migrations marker {marker}: {ex.Message}");
             }
         }
 
